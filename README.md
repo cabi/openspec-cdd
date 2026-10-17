@@ -154,7 +154,7 @@ rot and untestable prose.
 
 ```bash
 git clone <this-repo> && cd openspec-cdd
-node tests/smoke.mjs        # runs the full loop against a throwaway project, 21/21
+node tests/smoke.mjs        # runs the full loop against a throwaway project, 24/24
 ```
 
 Requirements: Node ≥ 20 and the OpenSpec repo cloned at `vendor/OpenSpec`
@@ -207,6 +207,7 @@ verifies:
 | S19 | C5 | the brownfield playbook ships documented: strangler fig, honest-source rule, WANT-question, `Extracted from:` provenance, own-on-touch |
 | S20 | C5 | split rule: a 17-task living change goes red (L3) with the split remediation; a recorded `split-considered:` decision passes |
 | S21 | C5 | archived changes are frozen history — a 20-task archive never trips L3 |
+| S22 | — | config rules parse as strings — the CLI never silently drops the injected rules (unquoted `": "` in a rule turns it into a YAML mapping) |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded
@@ -227,7 +228,7 @@ openspec/
     schema.yaml                  # proposal, specs, design gate, tasks + apply contract
     templates/{proposal,spec,design,tasks}.md
 tests/
-  smoke.mjs                      # 23 checks, C1–C5 + brownfield mapping + split rule
+  smoke.mjs                      # 24 checks, C1–C5 + brownfield mapping + split rule
   fixtures/{bad-ambiguous,good-verified}/
 docs/transcript.srt              # the source critique
 vendor/OpenSpec/                 # upstream repo for research + CLI (not committed)

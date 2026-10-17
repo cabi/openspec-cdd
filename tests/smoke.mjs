@@ -497,6 +497,17 @@ check('S21', 'C5', 'archived changes are frozen history: a 20-task archive never
   return 'the backstop polices living work, not history';
 });
 
+// --- S22: injected rules must actually load ----------------------------------
+check('S22', '—', 'config rules parse as strings - the CLI never silently drops them', () => {
+  const r = cliRun(['list']);
+  assert(r.code === 0, `exit ${r.code}: ${r.out.slice(0, 300)}`);
+  assert(
+    !/must be an array of strings/i.test(r.out),
+    `CLI dropped injected rules - an unquoted ": " inside a rule string makes YAML parse it as a mapping; quote the whole scalar:\n${r.out.slice(0, 500)}`
+  );
+  return 'all rules load as strings';
+});
+
 // --- report -----------------------------------------------------------------
 const width = 74;
 console.log(`\nlean-verified smoke tests  (project: ${path.basename(project)})`);

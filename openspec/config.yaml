@@ -15,7 +15,7 @@ rules:
   specs:
     - Quantify every interval, amount, limit, and threshold - no "bi-weekly", "fast", "regular", "several" without a number and unit
     - One behavior per requirement; every requirement has at least one WHEN/THEN scenario
-    - Every scenario ends with "Verified by: <committed acceptance test path>" - black-box, at the system boundary
+    - 'Every scenario ends with "Verified by: <committed acceptance test path>" - black-box, at the system boundary'
     - A requirement that no Done When criterion or existing contract needs is scope creep - cut it
   design:
     - The design gate decision is mechanical triage, not taste - record all five answers with evidence
@@ -27,4 +27,4 @@ rules:
     - No task without a requirement or Done When criterion that needs it
   apply:
     - Checked means "its verification passed", never "I stopped looking at it"
-    - Mechanical sweeps (lint --fix, codemods, framework updates) commit with a "Mechanical-Change: <reason>" trailer and never touch specs/ or acceptance tests; behavior changes go through the change loop
+    - 'Mechanical sweeps (lint --fix, codemods, framework updates) commit with a "Mechanical-Change: <reason>" trailer and never touch specs/ or acceptance tests; behavior changes go through the change loop'
