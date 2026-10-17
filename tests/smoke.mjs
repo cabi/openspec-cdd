@@ -498,7 +498,9 @@ check('S21', 'C5', 'archived changes are frozen history: a 20-task archive never
 });
 
 // --- S22: injected rules must actually load ----------------------------------
-check('S22', '—', 'config rules parse as strings - the CLI never silently drops them', () => {
+check('S22', '—', 'config rules parse as strings, and the no-inline-markers rule stays engraved', () => {
+  const cfg = fs.readFileSync(path.join(repoRoot, 'openspec', 'config.yaml'), 'utf8');
+  assert(/source code stays clean/.test(cfg) && /Code globs plus git history/.test(cfg), 'the rule that keeps spec markers out of source code must stay in config.yaml');
   const r = cliRun(['list']);
   assert(r.code === 0, `exit ${r.code}: ${r.out.slice(0, 300)}`);
   assert(

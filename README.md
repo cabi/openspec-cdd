@@ -207,7 +207,7 @@ verifies:
 | S19 | C5 | the brownfield playbook ships documented: strangler fig, honest-source rule, WANT-question, `Extracted from:` provenance, own-on-touch |
 | S20 | C5 | split rule: a 17-task living change goes red (L3) with the split remediation; a recorded `split-considered:` decision passes |
 | S21 | C5 | archived changes are frozen history — a 20-task archive never trips L3 |
-| S22 | — | config rules parse as strings — the CLI never silently drops the injected rules (unquoted `": "` in a rule turns it into a YAML mapping) |
+| S22 | — | config rules parse as strings (the CLI never silently drops them), and the "source code stays clean — no spec markers" rule stays engraved |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded

@@ -28,3 +28,4 @@ rules:
   apply:
     - Checked means "its verification passed", never "I stopped looking at it"
     - 'Mechanical sweeps (lint --fix, codemods, framework updates) commit with a "Mechanical-Change: <reason>" trailer and never touch specs/ or acceptance tests; behavior changes go through the change loop'
+    - Traceability lives in the openspec/ tree only - specs, tasks, and proposals carry it; source code stays clean (no verified-by, referenced-to, or spec-id comments); code-to-spec correlation is Code globs plus git history
