@@ -5,7 +5,7 @@
 # Setup once per clone (repo-committed hooks dir):
 #   git config core.hooksPath .githooks
 
-if [ ! -f openspec/config.yaml ] || [ ! -f scripts/spec-drift.mjs ]; then
+if [ ! -f openspec/config.yaml ] || [ ! -f openspec/scripts/spec-drift.mjs ]; then
   exit 0
 fi
 if ! command -v node >/dev/null 2>&1; then
@@ -13,7 +13,7 @@ if ! command -v node >/dev/null 2>&1; then
   exit 0
 fi
 
-node scripts/spec-drift.mjs --staged || {
+node openspec/scripts/spec-drift.mjs --staged || {
   cat >&2 <<'EOF'
 
 spec-drift: commit blocked — the spec, its acceptance tests, and the code

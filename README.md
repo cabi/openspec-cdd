@@ -16,7 +16,7 @@ turns each into a mechanical constraint:
 | C2 | *"English really isn't precise"* (bi-weekly = every two weeks or twice a week?); chasing precision ends in *"the logical conclusion … is just to write code"* | Specs must carry a **quantified requirement + at least one `#### Scenario:`** with `WHEN/THEN` and `SHALL`, each ending in `Verified by: <committed acceptance test>` (black-box, at the system boundary). Spec + acceptance tests form the **contract** — complete and machine-checkable before any code exists. Vague specs **fail `validate --strict`**. |
 | C3 | *"the solution starts drifting in area where there's already a solution" … until it's bloated and messy* | Proposal must include **`## Solutions Considered`** (reuse-first: existing tools, libraries, commands) and **`## Non-Goals`** (explicit scope fence, ≥1 entry). "None found" must name what was searched. Tasks instruction forbids tasks without a requirement. |
 | C4 | *"how do we know when we're done?"* | Proposal must include **`## Done When`** — 1–5 observable checks. Every task is phrased as **the interface it establishes** and ends with **`verify by <command/test/check>`**; tasks are worked **red-green-refactor** (the failing unit test *is* the design decision); a **Done When Traceability** table maps each criterion to the task ids that prove it. |
-| C5 | *"the spec becomes the source of truth"* — but code is the real truth, so specs rot | The loop **ends in `openspec archive`**: verify a task → check it off → archive merges the delta into the living spec. A **three-door drift guard** (`scripts/spec-drift.mjs`: apply preflight → pre-commit hook → CI) enforces that spec, acceptance tests, and code travel together. Unit tests churn freely with the design; only the acceptance tests are contract and must stay stable — code + tests are the truth, the spec is the index. |
+| C5 | *"the spec becomes the source of truth"* — but code is the real truth, so specs rot | The loop **ends in `openspec archive`**: verify a task → check it off → archive merges the delta into the living spec. A **three-door drift guard** (`openspec/scripts/spec-drift.mjs`: apply preflight → pre-commit hook → CI) enforces that spec, acceptance tests, and code travel together. Unit tests churn freely with the design; only the acceptance tests are contract and must stay stable — code + tests are the truth, the spec is the index. |
 
 ## The workflow
 
@@ -54,7 +54,7 @@ step ③ plans fulfillment; apply performs it; archive discharges it.
 
 ### The drift guard — one script, three doors
 
-`scripts/spec-drift.mjs` keeps the index honest, nearest to where drift starts:
+`openspec/scripts/spec-drift.mjs` keeps the index honest, nearest to where drift starts:
 
 - **L1 traceability** — every `Verified by` pin in every spec resolves to an existing file; every test under `tests/acceptance/` is pinned by some spec (no orphans, no broken pins).
 - **L2 staleness** — a requirement may carry `Code: <glob>` lines; if a matching file's last commit moved past the spec's last commit (by **topology**, not second-resolution timestamps), the spec is stale. Commits marked `Mechanical-Change: <reason>` (lint sweeps, codemods, framework updates) carry no contract information and don't move the clock.
@@ -90,10 +90,10 @@ Safe, but worthless until territory becomes owned. The migration has four moves:
 
 | Phase | Move | What happens |
 |---|---|---|
-| 0 · adopt | copy `openspec/` + `scripts/` + `.githooks/`, CI on | every *new* change is born owned; legacy stays explicitly unowned. `tests/acceptance/` is contract territory from day one — leave it empty; legacy tests stay where they are and surface via `--tests` |
+| 0 · adopt | copy `openspec/` + `.githooks/`, CI on | every *new* change is born owned; legacy stays explicitly unowned. `tests/acceptance/` is contract territory from day one — leave it empty; legacy tests stay where they are and surface via `--tests` |
 | 1 · extract | per capability area, an agent drafts a spec-change **from the existing tests**; humans review | each scenario's `Verified by` pins a test that already exists — and the same change **moves that test into `tests/acceptance/`**, pin and move in one commit. Review asks the **WANT-question**: "is this what we *want*?", not "is this accurate?" (the pins answer accuracy). Mark the proposal `Extracted from: <test paths>` so readers know the intent was reverse-engineered. |
 | 2 · own-on-touch | weak-test areas stay unowned until first changed | that change brings the spec seed for the behavior it touches; known-but-untested behavior enters as a proposal pinning tests that don't exist yet — test-first tasks create them |
-| 3 · burn-down | `scripts/spec-extract.mjs` | deterministic map (no LLM): unpinned tests = extraction candidates, unowned files = exposure, `% owned` = the adoption metric |
+| 3 · burn-down | `openspec/scripts/spec-extract.mjs` | deterministic map (no LLM): unpinned tests = extraction candidates, unowned files = exposure, `% owned` = the adoption metric |
 
 Two rules keep extraction honest:
 
@@ -106,9 +106,9 @@ Two rules keep extraction honest:
   whatever survived it. Batch by capability — a 500-scenario PR is review theater.
 
 ```bash
-node scripts/spec-extract.mjs               # the map, human-readable
-node scripts/spec-extract.mjs --json        # burn-down over time (CI badge)
-node scripts/spec-extract.mjs --tests src   # tests living next to their sources
+node openspec/scripts/spec-extract.mjs               # the map, human-readable
+node openspec/scripts/spec-extract.mjs --json        # burn-down over time (CI badge)
+node openspec/scripts/spec-extract.mjs --tests src   # tests living next to their sources
 ```
 
 
@@ -120,7 +120,7 @@ Copy, replace the two placeholders, hand to your agent of choice:
 Draft a spec-extraction proposal for the capability area "<area>",
 e.g. "billing" or "reporting". Work evidence-first:
 
-1. Run `node scripts/spec-extract.mjs --json` (add `--tests <glob>`
+1. Run `node openspec/scripts/spec-extract.mjs --json` (add `--tests <glob>`
    if tests live next to sources). From `unowned` and
    `extractionCandidates`, confirm the files belonging to "<area>".
 2. Read the existing tests for that area. They are your ONLY admissible
@@ -136,7 +136,7 @@ e.g. "billing" or "reporting". Work evidence-first:
    covered by tests)" list in your change description — never into the
    spec. Requirements without a pin are plausible fiction and will be
    rejected.
-7. Self-check, then report: `node scripts/spec-drift.mjs` must be green,
+7. Self-check, then report: `node openspec/scripts/spec-drift.mjs` must be green,
    the test suite must pass, and state the burn-down delta
    (`spec-extract.mjs --json` before vs. after).
 ```
@@ -162,7 +162,7 @@ Requirements: Node ≥ 20 and the OpenSpec repo cloned at `vendor/OpenSpec`
 
 ### Use the schema in your own project
 
-1. Copy this repo's `openspec/`, `scripts/`, and `.githooks/` folders into your project root, then `git config core.hooksPath .githooks` (door 2) — the CI workflow (door 3) copies along.
+1. Copy this repo's `openspec/` and `.githooks/` folders into your project root, then `git config core.hooksPath .githooks` (door 2) — the CI workflow (door 3) copies along.
 2. Run `npx openspec schema which lean-verified --json` → `"source": "project"` confirms yours shadows the built-ins.
 3. Drive your agent with the normal OpenSpec loop; the schema changes what the agent is told:
 
@@ -218,15 +218,16 @@ design-gate skip and pinned acceptance test).
 .github/workflows/spec-drift.yml # door 3: CI backstop (fetch-depth: 0)
 .gitlab-ci.yml                     # door 3 on GitLab (kept in parity with the workflow above)
 .githooks/pre-commit             # door 2: commit-time guard (--staged)
-scripts/spec-drift.mjs           # the drift guard: L1 traceability + L2 staleness
-scripts/spec-extract.mjs         # brownfield map: extraction candidates + unowned files + burn-down
 openspec/
   config.yaml                    # schema: lean-verified + injected rules/context
+  scripts/
+    spec-drift.mjs               # the drift guard: L1 traceability + L2 staleness + L3 scale
+    spec-extract.mjs             # brownfield map: extraction candidates + unowned files + burn-down
   schemas/lean-verified/
     schema.yaml                  # proposal, specs, design gate, tasks + apply contract
     templates/{proposal,spec,design,tasks}.md
 tests/
-  smoke.mjs                      # 21 checks, C1–C5 + brownfield mapping
+  smoke.mjs                      # 23 checks, C1–C5 + brownfield mapping + split rule
   fixtures/{bad-ambiguous,good-verified}/
 docs/transcript.srt              # the source critique
 vendor/OpenSpec/                 # upstream repo for research + CLI (not committed)

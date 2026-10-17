@@ -5,8 +5,8 @@
   "description": "Contract-driven development on OpenSpec: lean-verified schema, spec drift guard, three doors, brownfield playbook",
   "scripts": {
     "test": "node tests/smoke.mjs",
-    "spec-drift": "node scripts/spec-drift.mjs",
-    "spec-extract": "node scripts/spec-extract.mjs"
+    "spec-drift": "node openspec/scripts/spec-drift.mjs",
+    "spec-extract": "node openspec/scripts/spec-extract.mjs"
   },
   "engines": {
     "node": ">=20"

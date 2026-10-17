@@ -248,16 +248,16 @@ function initDriftRepo(name) {
   fs.mkdirSync(path.join(gp, 'openspec/specs/usage-reporting'), { recursive: true });
   fs.mkdirSync(path.join(gp, 'tests/acceptance'), { recursive: true });
   fs.mkdirSync(path.join(gp, 'src/usage-report'), { recursive: true });
-  fs.mkdirSync(path.join(gp, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(gp, 'openspec/scripts'), { recursive: true });
   fs.copyFileSync(path.join(repoRoot, 'openspec', 'config.yaml'), path.join(gp, 'openspec/config.yaml'));
   fs.copyFileSync(path.join(fx, 'specs/usage-reporting/spec.md'), path.join(gp, 'openspec/specs/usage-reporting/spec.md'));
   fs.copyFileSync(path.join(fx, 'tests/acceptance/usage-reporting.schedule.test.ts'), path.join(gp, 'tests/acceptance/usage-reporting.schedule.test.ts'));
   fs.writeFileSync(path.join(gp, 'src/usage-report/report.ts'), 'export const report = 1;\n');
-  fs.copyFileSync(path.join(repoRoot, 'scripts', 'spec-drift.mjs'), path.join(gp, 'scripts/spec-drift.mjs'));
+  fs.copyFileSync(path.join(repoRoot, 'openspec', 'scripts', 'spec-drift.mjs'), path.join(gp, 'openspec/scripts/spec-drift.mjs'));
   g(['add', '-A']);
   g(['commit', '-qm', 'init']);
   const drift = () => {
-    const r = spawnSync('node', ['scripts/spec-drift.mjs'], { cwd: gp, encoding: 'utf8' });
+    const r = spawnSync('node', ['openspec/scripts/spec-drift.mjs'], { cwd: gp, encoding: 'utf8' });
     return { code: r.status, out: `${r.stdout ?? ''}${r.stderr ?? ''}` };
   };
   return { gp, g, drift };
@@ -350,7 +350,7 @@ check('S16', 'C5', 'door 3 stays a machine on every forger: guard + acceptance s
     ['gitlab', path.join(repoRoot, '.gitlab-ci.yml')],
   ].map(([forge, f]) => [forge, fs.readFileSync(f, 'utf8')]);
   for (const [forge, wf] of files) {
-    assert(/node scripts\/spec-drift\.mjs/.test(wf), `${forge}: drift guard step missing`);
+    assert(/node openspec\/scripts\/spec-drift\.mjs/.test(wf), `${forge}: drift guard step missing`);
     assert(/npm test --if-present/.test(wf), `${forge}: acceptance-suite run step missing`);
     assert(/No agent harness here by design/.test(wf), `${forge}: no-agent principle not stated`);
     assert(/node-version: 20/.test(wf) || /image: node:20/.test(wf), `${forge}: node 20 not pinned`);
@@ -375,17 +375,17 @@ function initBrownfield(name) {
   fs.mkdirSync(path.join(gp, 'openspec'), { recursive: true });
   fs.mkdirSync(path.join(gp, 'src/legacy'), { recursive: true });
   fs.mkdirSync(path.join(gp, 'tests'), { recursive: true });
-  fs.mkdirSync(path.join(gp, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(gp, 'openspec/scripts'), { recursive: true });
   fs.copyFileSync(path.join(repoRoot, 'openspec', 'config.yaml'), path.join(gp, 'openspec/config.yaml'));
   fs.writeFileSync(path.join(gp, 'src/legacy/report.ts'), 'export const report = 1;\n');
   fs.writeFileSync(path.join(gp, 'src/legacy/report.test.ts'), 'test();\n'); // co-located legacy test
   fs.writeFileSync(path.join(gp, 'tests/legacy.report.test.ts'), 'test();\n'); // legacy test, plain dir
-  fs.copyFileSync(path.join(repoRoot, 'scripts', 'spec-drift.mjs'), path.join(gp, 'scripts/spec-drift.mjs'));
-  fs.copyFileSync(path.join(repoRoot, 'scripts', 'spec-extract.mjs'), path.join(gp, 'scripts/spec-extract.mjs'));
+  fs.copyFileSync(path.join(repoRoot, 'openspec', 'scripts', 'spec-drift.mjs'), path.join(gp, 'openspec/scripts/spec-drift.mjs'));
+  fs.copyFileSync(path.join(repoRoot, 'openspec', 'scripts', 'spec-extract.mjs'), path.join(gp, 'openspec/scripts/spec-extract.mjs'));
   g(['add', '-A']);
   g(['commit', '-qm', 'legacy codebase']);
   const run = (script, args = []) => {
-    const r = spawnSync('node', [`scripts/${script}.mjs`, ...args], { cwd: gp, encoding: 'utf8' });
+    const r = spawnSync('node', [`openspec/scripts/${script}.mjs`, ...args], { cwd: gp, encoding: 'utf8' });
     return { code: r.status, out: `${r.stdout ?? ''}${r.stderr ?? ''}` };
   };
   return { gp, g, run };

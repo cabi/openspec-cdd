@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node scripts/spec-drift.mjs
+      - run: node openspec/scripts/spec-drift.mjs
       # Smoke tests validate the schema with the real OpenSpec CLI; vendor/
       # is gitignored, so build it fresh from upstream on every run.
       - run: git clone --depth=1 https://github.com/Fission-AI/OpenSpec vendor/OpenSpec

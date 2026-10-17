@@ -287,7 +287,7 @@ apply:
     Pause if you hit blockers or need clarification from the user.
 
     Before archiving, run the project's drift guard if it has one:
-    `node scripts/spec-drift.mjs` (or `--staged` at the commit door). Fix
+    `node openspec/scripts/spec-drift.mjs` (or `--staged` at the commit door). Fix
     everything it reports first - a code change whose spec was not updated
     in the same change is drift, even when every test passes.
 
