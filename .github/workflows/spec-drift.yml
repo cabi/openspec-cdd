@@ -1,0 +1,48 @@
+name: spec-drift
+
+# Door 3: the non-bypassable backstop. The same script the schema runs at
+# apply time and the pre-commit hook runs at commit time, here as a full scan.
+# Hooks are local and --no-verify exists; CI is where drift cannot hide.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # L2 staleness walks git history
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/spec-drift.mjs
+      # The verdict is mechanical: run the acceptance suite the specs pin.
+      # No agent harness here by design — an arbiter must be a machine, not a
+      # negotiator. Adapt the command to your stack (pytest, go test, ...).
+      - run: npm test --if-present
+
+  # ── Optional: agent triage on red ─────────────────────────────────────────
+  # Non-blocking by design: the agent reacts to the verdict, it never renders
+  # it. Uncomment and set the AGENT_TOKEN secret to let a headless agent
+  # diagnose failures and propose a fix as a PR comment.
+  #
+  # triage:
+  #   needs: drift
+  #   if: failure()
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     issues: write
+  #     pull-requests: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - run: npx pi@latest -p "Door 3 went red. Diagnose which acceptance
+  #         test failed and why, then propose a fix as a PR comment. Do not
+  #         push, do not merge, do not edit specs or acceptance tests."
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.AGENT_TOKEN }}

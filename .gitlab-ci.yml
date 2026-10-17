@@ -1,0 +1,38 @@
+# Door 3 on GitLab — same contract as .github/workflows/spec-drift.yml:
+# a machine renders the verdict; agents may only react to it.
+# Keep both files in sync — smoke check S16 asserts parity.
+
+stages: [verify, triage]
+
+spec-drift:
+  stage: verify
+  image: node:20
+  # L2/M compare commit topology: the runner must clone full history.
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - node scripts/spec-drift.mjs
+    # The verdict is mechanical: run the acceptance suite the specs pin.
+    # No agent harness here by design — an arbiter must be a machine, not a
+    # negotiator. Adapt the command to your stack (pytest, go test, ...).
+    - npm test --if-present
+
+# ── Optional: agent triage on red ──────────────────────────────────────────
+# Non-blocking by design: the agent reacts to the verdict, it never renders
+# it. Uncomment and set the AGENT_TOKEN CI/CD variable (masked) to let a
+# headless agent diagnose failures and propose a fix as an MR note.
+#
+# triage:
+#   stage: triage
+#   image: node:20
+#   when: on_failure        # runs only when verify went red
+#   allow_failure: true     # triage can never block the pipeline
+#   needs: [spec-drift]
+#   variables:
+#     GIT_DEPTH: "0"
+#   script:
+#     - npx pi@latest -p "Door 3 went red. Diagnose which acceptance
+#       test failed and why, then propose a fix as an MR note. Do not
+#       push, do not merge, do not edit specs or acceptance tests."
+#   # AGENT_TOKEN is injected via Settings > CI/CD > Variables (masked),
+#   # never written into this file.

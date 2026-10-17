@@ -1,0 +1,25 @@
+#!/bin/sh
+# lean-verified drift guard — door 2: the commit.
+# Drift is caught where it started, seconds after the edit.
+#
+# Setup once per clone (repo-committed hooks dir):
+#   git config core.hooksPath .githooks
+
+if [ ! -f openspec/config.yaml ] || [ ! -f scripts/spec-drift.mjs ]; then
+  exit 0
+fi
+if ! command -v node >/dev/null 2>&1; then
+  echo "spec-drift: node not found — skipping" >&2
+  exit 0
+fi
+
+node scripts/spec-drift.mjs --staged || {
+  cat >&2 <<'EOF'
+
+spec-drift: commit blocked — the spec, its acceptance tests, and the code
+must travel together. Fix the drift above in this same commit (update the
+spec's Verified by / Code lines, or restore the deleted test), or bypass
+deliberately: git commit --no-verify
+EOF
+  exit 1
+}

@@ -1,0 +1,273 @@
+name: lean-verified
+version: 1
+description: >
+  Lean, reuse-first, verification-driven flow. Fixes the classic spec-driven
+  development failures: ceremony without end (a three-step pipeline plus an
+  auto-triage design gate that costs one line when unused),
+  ambiguous prose (validator-enforced scenarios with quantified values),
+  reinventing solved problems (Solutions Considered before every capability),
+  and no definition of done (Done When criteria traced into verified tasks).
+
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: Problem, reuse scan, scope fence, and done criteria
+    template: proposal.md
+    instruction: |
+      Create the proposal that establishes WHY this change is needed, WHAT is
+      already solved elsewhere, where the scope fence sits, and HOW we will
+      know it is done. This is a decision document, not a design document:
+      no implementation details.
+
+      Sections (all required):
+
+      - **Why**: 1-2 sentences on the user-visible problem or opportunity.
+        State the problem, not a solution. If you cannot name who hurts and
+        how, the change is not ready.
+
+      - **What Changes**: Bullet list of behavior changes. Be specific about
+        new capabilities, modifications, or removals. Mark breaking changes
+        with **BREAKING**.
+
+      - **Solutions Considered** (reuse-first): For EVERY capability listed
+        below, name the existing solutions you evaluated before deciding to
+        build: libraries, platform/framework features, tools already in the
+        dependency tree, and existing specs. Record for each: what it covers,
+        and why you adopt it or reject it. "None found" is only acceptable
+        if you name what you searched (packages, docs, `openspec list --specs`).
+        Do not specify new behavior in an area where a maintained solution
+        already fits - adopt it and note the trade-off instead.
+
+      - **Non-Goals**: What this change explicitly will NOT do. This is the
+        scope fence against feature creep: every tempting adjacent feature
+        goes here, not into the spec. At least one entry is required; if the
+        scope is truly minimal, name the closest feature you are rejecting.
+
+      - **Done When**: 1-5 completion criteria, each phrased as an observable
+        check (a command that exits 0, an artifact that exists, a behavior a
+        user can observe), never as an activity ("implement", "add"). These
+        are the change's definition of done; tasks.md must trace back to
+        every one of them.
+
+      - **Capabilities**: Which specs are created or modified:
+        - **New Capabilities**: Each becomes `specs/<capability-path>/spec.md`.
+          Name each capability for a durable system behavior (for example,
+          `user-auth`), not the work in this change (for example,
+          `add-login-endpoint`). Use kebab-case for path segments you
+          introduce and follow the project's existing spec organization.
+        - **Modified Capabilities**: Existing capabilities whose REQUIREMENTS
+          are changing. Use the exact existing path under `openspec/specs/`.
+
+      Before filling in Capabilities, research what already exists: run
+      `openspec list --specs` for the capability inventory, then
+      `openspec show "<spec-id>" --type spec --json --no-scenarios` for any
+      that look related. Reuse an existing capability's exact path instead of
+      introducing a near-duplicate name.
+
+      Every change must either declare at least one capability (new or
+      modified) or explicitly opt out of specs: `openspec validate` rejects a
+      change with zero deltas unless the change's `.openspec.yaml` sets
+      `skip_specs: true`. Use `skip_specs: true` only when no spec-level
+      behavior changes (pure refactor, tooling, docs). Do not invent a
+      requirement just to satisfy validation.
+
+      Keep the whole document under one page. If a section does not change a
+      decision someone makes, delete it.
+    requires: []
+
+  - id: specs
+    generates: "specs/**/*.md"
+    description: Behavior contracts with quantified, testable scenarios
+    template: spec.md
+    instruction: |
+      Create specification files that define WHAT the system observably does.
+      Precision lives in scenarios, not in prose: a spec that chases precision
+      through ever-more-detailed English either stays ambiguous or turns into
+      pseudo-code. State each behavior once as a requirement, then pin it
+      down with quantified WHEN/THEN scenarios that read like test cases.
+
+      Format requirements (openspec validate enforces these):
+      - One spec file per capability listed in the proposal, at
+        `specs/<capability-path>/spec.md`.
+      - Each requirement: `### Requirement: <name>` followed by a description
+        of at most 500 characters stating exactly one behavior. Use SHALL/MUST
+        for normative statements (never should/may).
+      - Every requirement MUST have at least one scenario:
+        `#### Scenario: <name>` with **WHEN**/**THEN** bullet lines, exactly
+        4 hashtags - 3 hashtags or bullets fail silently.
+      - New capabilities: the delta's first section is `## Purpose` (1-2
+        sentences, 50+ characters, or `--strict` flags it as too brief).
+      - Delta operations with `##` headers: ADDED / MODIFIED (full updated
+        requirement block) / REMOVED (with **Reason** and **Migration**) /
+        RENAMED (FROM:/TO:).
+
+      Quantification rules (the anti-"bi-weekly" rules):
+      - Every interval, amount, limit, and threshold carries a number and a
+        unit: "every 14 days", not "bi-weekly" or "regularly"; "p95 under
+        200 ms", not "fast"; "3 retries", not "several".
+      - Comparatives ("fast", "large", "user-friendly") are banned unless a
+        number follows them. If it cannot be measured, it is a Non-Goal, not
+        a requirement.
+      - Each scenario is a potential automated test: WHEN states the exact
+        input or trigger, THEN states the exactly observable outcome. Anyone
+        reading a scenario can say what to run and what result to expect.
+
+      Contract rule: every scenario ends with a "Verified by: <path to a
+      committed acceptance test>" line. The spec plus its acceptance tests
+      form the change's contract - complete and machine-checkable before
+      any code exists (mostly red). Acceptance tests are black-box: they
+      observe only the system boundary the WHEN/THEN describes, never
+      internal classes or functions, so they survive every internal
+      redesign. Unit tests are not pinned here; they are born during apply
+      (see tasks).
+
+      Content rules:
+      - Spec a behavior contract, not an implementation: observable behavior,
+        inputs, outputs, error conditions, external constraints. No internal
+        class/function names, no library choices, no step-by-step internals -
+        those belong in tasks.md design notes.
+      - Quick test: if the implementation can change without changing
+        externally visible behavior, it does not belong in the spec.
+      - Do not add requirements the proposal's Done When does not need. Every
+        requirement exists because a Done When criterion or an existing
+        contract demands it - anything else is scope creep.
+
+      Write the spec files one at a time, say which capability you are writing,
+      and write each file as soon as it is drafted.
+    requires:
+      - proposal
+
+
+  - id: design
+    generates: design.md
+    description: Auto-triage design gate - full design only when complexity demands it
+    template: design.md
+    instruction: |
+      Run the complexity triage below FIRST. The decision is mechanical, not
+      a matter of taste: answer all five triggers with evidence from the
+      specs and the codebase.
+
+      Triage triggers (any YES requires a full design):
+      - **T1 Cross-cutting**: the change modifies requirements in 3 or more
+        capabilities, or touches code paths owned by 3 or more capabilities.
+      - **T2 Architecture bet**: introduces a new service, datastore, or
+        external dependency, or deletes/rewrites an existing capability.
+      - **T3 Shared-seam change**: alters an interface that other
+        capabilities or other implementers already depend on.
+      - **T4 Invariant risk**: a performance, security, or correctness
+        threshold must hold (p95, retries, permissions) and a wrong design
+        can silently violate it.
+      - **T5 Parallel work**: more than one agent/person implements, or the
+        task list will exceed 8 tracked tasks.
+
+      If NO trigger fires: design.md contains ONLY the skip record - the
+      five triage answers plus one sentence why design is trivial here. A
+      skip that is not recorded counts as an unmade decision, not a made
+      one; an unrecorded skip is how design debt starts.
+
+      If ANY trigger fires: write a short design that names, for each fired
+      trigger: the interfaces and seams involved (signatures, file paths),
+      the chosen approach and the alternative rejected, the risks with
+      their mitigations, and the open questions tasks.md will settle as
+      unit tests. Design covers HOW; the spec already covers WHAT - no
+      prose that restates the spec. Keep it under one page; cut anything a
+      task could decide later.
+
+      Design here is disposable: it exists to de-risk the task list, not to
+      become documentation. Once tasks are written, the design's interfaces
+      live on in code and in the unit tests that encode them.
+    requires:
+      - specs
+  - id: tasks
+    generates: tasks.md
+    description: Verified implementation checklist traced to Done When
+    template: tasks.md
+    instruction: |
+      Create the task list that implements exactly what the specs require -
+      nothing more. Every task states how to verify completion, and every
+      Done When criterion from proposal.md traces to at least one task.
+
+      Before writing tasks, check the proposal's Done When section. If any
+      criterion is not observable as written, resolve it with the user first.
+
+      Format rules (the apply phase parses checkbox format):
+      - Group related tracked tasks under `##` numbered headings.
+      - Each tracked task MUST be a checkbox: `- [ ] X.Y Task description`.
+        A box holding only `x` (any case/spacing) counts as done; anything
+        else reads as unfinished.
+      - EVERY task MUST end with its verification: "verify by <command,
+        test, or observable check>". A task without a verification is not a
+        task, it is a wish. Example:
+        `- [ ] 1.1 Add retry loop to export client, verify by npm test -- export.retry`
+
+      Design by unit test (how these tasks get worked): phrase each task as
+      the interface it establishes ("Reporter emits a CSV header row"),
+      never as an activity ("implement reporting"). Every task is worked
+      red-green-refactor during apply: write the failing unit test that
+      names that interface, implement the smallest code that turns it
+      green, refactor freely. Unit tests are engineering artifacts born
+      during apply - they churn with the design and are never pinned in the
+      spec. Only the scenarios' acceptance tests (Verified by in the specs)
+      are contract: they live at the system boundary and stay stable.
+      - Order tasks by dependency. Keep each task small enough to finish in
+        one session.
+      - If the design gate fired and produced a design, turn its open
+        questions into early tasks. Keep a `## Design Notes` section only
+        for planning decisions the design gate did not cover - a decision
+        and its rationale per line, not an essay. Skip the section when the
+        design gate and specs already determine the approach; a design
+        document that restates the spec is ceremony.
+      - End with `## Done When Traceability`: a table row per proposal
+      criterion - `| <criterion> | <task ids that verify it> |`. If a
+      criterion has no task, add the task or fix the criterion.
+
+      Anti-scope-creep rule: no task may exist without a spec requirement or
+      Done When criterion that needs it. Improvements, refactors, and
+      nice-to-haves that no criterion demands go back into the proposal as
+      Non-Goals or a future change.
+
+      Group-local testing: each task group lands the unit tests its own
+      work calls for. Do not collect testing into a final group. A final
+      group is for integration checks and for running the scenarios'
+      acceptance tests (the Verified by entries from the specs) end to end.
+    requires:
+      - specs
+      - design
+
+apply:
+  requires: [tasks]
+  tracks: tasks.md
+  instruction: |
+    Work through the pending tasks top to bottom. For each task: implement it,
+    run the verification the task itself names, and only then mark the box
+    checked - a checked box means "its verification passed", never "I am done
+    looking at it". If a verification fails or a task turns out wrong, uncheck
+    and fix; do not continue on a red check.
+
+
+    Work each task as a design-by-unit-test loop: first write the failing
+    unit test that names the interface the task creates (red), then the
+    smallest implementation that turns it green, then refactor. The unit
+    test IS the design decision, made executable - never write unit tests
+    after the code as transcription. Unit tests may change whenever the
+    design changes; the acceptance tests pinned in the specs (Verified by)
+    must pass unchanged. A red unit test, a red acceptance test, or both
+    means the contract is not yet performed.
+    Pause if you hit blockers or need clarification from the user.
+
+    Before archiving, run the project's drift guard if it has one:
+    `node scripts/spec-drift.mjs` (or `--staged` at the commit door). Fix
+    everything it reports first - a code change whose spec was not updated
+    in the same change is drift, even when every test passes.
+
+    Mechanical sweeps (lint --fix, codemods, framework updates) are not
+    changes: commit them with a `Mechanical-Change: <reason>` trailer and never
+    touch specs/ or acceptance tests in the same commit - the drift guard
+    exempts such commits from staleness but rejects any that touch the
+    contract. If the sweep changes behavior, that part goes through this loop.
+
+    When every task is checked: re-run each Done When criterion from
+    proposal.md, confirm the traceability table in tasks.md, then archive the
+    change (openspec archive) so the delta merges into the living spec under
+    openspec/specs/ - the spec stays the single source of truth because it is
+    updated mechanically at completion, not by hand later.

@@ -1,0 +1,30 @@
+schema: lean-verified
+
+context: |
+  This repository hosts the "lean-verified" OpenSpec schema and its smoke
+  tests. The schema exists to answer a specific critique of spec-driven
+  development (Tim Corey, Dev Questions - see docs/transcript.srt):
+  specs degenerate into management ceremony, ambiguous prose, reinvented
+  solutions, and no definition of done.
+
+rules:
+  proposal:
+    - Every capability needs a Solutions Considered entry naming what was evaluated and what was searched
+    - Non-Goals must list at least one explicitly rejected adjacent feature
+    - Done When criteria are observable checks, never activities
+  specs:
+    - Quantify every interval, amount, limit, and threshold - no "bi-weekly", "fast", "regular", "several" without a number and unit
+    - One behavior per requirement; every requirement has at least one WHEN/THEN scenario
+    - Every scenario ends with "Verified by: <committed acceptance test path>" - black-box, at the system boundary
+    - A requirement that no Done When criterion or existing contract needs is scope creep - cut it
+  design:
+    - The design gate decision is mechanical triage, not taste - record all five answers with evidence
+    - No fired design without interfaces, rejected alternative, and risks; no skip without the recorded triage
+  tasks:
+    - Every task ends with "verify by <command, test, or observable check>"
+    - Phrase tasks as the interface they establish, never as an activity; they are worked red-green-refactor
+    - Every Done When criterion traces to at least one task in the traceability table
+    - No task without a requirement or Done When criterion that needs it
+  apply:
+    - Checked means "its verification passed", never "I stopped looking at it"
+    - Mechanical sweeps (lint --fix, codemods, framework updates) commit with a "Mechanical-Change: <reason>" trailer and never touch specs/ or acceptance tests; behavior changes go through the change loop

@@ -1,0 +1,8 @@
+# research artifacts kept local for now (transcript not published yet)
+docs/
+
+# vendored OpenSpec clone used during research
+vendor/
+
+# pi agent session data
+.pi/
