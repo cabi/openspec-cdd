@@ -11,6 +11,10 @@ spec-drift:
   variables:
     GIT_DEPTH: "0"
   script:
+    # Smoke tests validate the schema with the real OpenSpec CLI; vendor/
+    # is gitignored, so build it fresh from upstream on every run.
+    - git clone --depth=1 https://github.com/Fission-AI/OpenSpec vendor/OpenSpec
+    - cd vendor/OpenSpec && corepack enable && pnpm install --frozen-lockfile
     - node scripts/spec-drift.mjs
     # The verdict is mechanical: run the acceptance suite the specs pin.
     # No agent harness here by design — an arbiter must be a machine, not a
