@@ -340,7 +340,7 @@ check('S15', 'C5', 'drift guard: a helper claimed by two specs has no single own
   g(['add', '-A']);
   g(['commit', '-qm', 'add billing spec']);
   const r = drift();
-  assert(r.code === 1 && /claimed by 2 specs/.test(r.out), `double-claimed helper not caught:\n${r.out}`);
+  assert(r.code === 1 && /claimed by 2 capabilities/.test(r.out), `double-claimed helper not caught:\n${r.out}`);
   fs.rmSync(gp, { recursive: true, force: true });
   return 'single-owner rule: one file, one spec - helpers get narrowed globs or their own capability';
 });
@@ -508,6 +508,89 @@ check('S22', '—', 'config rules parse as strings, and the no-inline-markers ru
     `CLI dropped injected rules - an unquoted ": " inside a rule string makes YAML parse it as a mapping; quote the whole scalar:\n${r.out.slice(0, 500)}`
   );
   return 'all rules load as strings';
+});
+
+// --- S23–S24: capability lifecycle — one capability, one owner, in flight ----
+check('S23', 'C5', 'capability lifecycle: archive and in-flight updates of an existing capability stay green', () => {
+  const { gp, g, drift } = initDriftRepo('drift-cap-lifecycle');
+  // start greenfield: initDriftRepo's seeded "living spec" is a raw delta copy
+  // (structurally invalid for the CLI's merger) — the change's delta is the only spec
+  fs.rmSync(path.join(gp, 'openspec/specs'), { recursive: true, force: true });
+  g(['add', '-A']);
+  g(['commit', '-qm', 'greenfield start']);
+  fs.cpSync(path.join(repoRoot, 'tests/fixtures/good-verified'), path.join(gp, 'openspec/changes/usage-report-v1'), { recursive: true });
+  fs.mkdirSync(path.join(gp, 'src/usage-report'), { recursive: true });
+  fs.mkdirSync(path.join(gp, 'tests/acceptance'), { recursive: true });
+  fs.writeFileSync(path.join(gp, 'src/usage-report/report.ts'), 'export const report = 1;\n');
+  fs.writeFileSync(path.join(gp, 'tests/acceptance/usage-reporting.schedule.test.ts'), 'test();\n');
+  g(['add', '-A']);
+  g(['commit', '-qm', 'change v1: delta + code + acceptance test']);
+  let r = drift();
+  assert(r.code === 0, `open change with its own delta must be green:\n${r.out}`);
+
+  const arch = spawnSync('node', [cli, 'archive', 'usage-report-v1', '--yes'], { cwd: gp, encoding: 'utf8' });
+  assert(arch.status === 0, `archive failed:\n${arch.stdout}${arch.stderr}`);
+  g(['add', '-A']);
+  g(['commit', '-qm', 'archive v1 (living spec created, delta frozen)']);
+  r = drift();
+  assert(r.code === 0 && !/\[O\]/.test(r.out), `an archived delta must stop claiming code (frozen history):\n${r.out}`);
+
+  // v2: in-flight update of the EXISTING capability — delta + code + test together
+  fs.mkdirSync(path.join(gp, 'openspec/changes/usage-report-v2/specs/usage-reporting'), { recursive: true });
+  fs.writeFileSync(
+    path.join(gp, 'openspec/changes/usage-report-v2/specs/usage-reporting/spec.md'),
+    '## ADDED Requirements\n\n### Requirement: Batch Export\n\nThe system shall export batches.\n\n#### Scenario: Nightly batch\n\n- **WHEN** the nightly job runs\n- **THEN** a batch file is written\n- **Verified by** tests/acceptance/usage-reporting.batch.test.ts\n\nCode: `src/usage-report/**`\n'
+  );
+  fs.writeFileSync(path.join(gp, 'src/usage-report/batch.ts'), 'export const batch = 2;\n');
+  fs.writeFileSync(path.join(gp, 'tests/acceptance/usage-reporting.batch.test.ts'), 'test();\n');
+  g(['add', '-A']);
+  g(['commit', '-qm', 'v2: in-flight update of existing capability']);
+  r = drift();
+  assert(r.code === 0, `an open delta updating its own capability is the mechanism, not drift:\n${r.out}`);
+  fs.rmSync(gp, { recursive: true, force: true });
+  return 'apply lifecycle green: open change -> archive -> follow-up change on the same capability';
+});
+
+check('S24', 'C5', 'one capability one owner: parallel open changes and cross-capability claims go red', () => {
+  const { gp, g, drift } = initDriftRepo('drift-cap-owner');
+  fs.mkdirSync(path.join(gp, 'openspec/specs/usage-reporting'), { recursive: true });
+  fs.mkdirSync(path.join(gp, 'src/usage-report'), { recursive: true });
+  fs.mkdirSync(path.join(gp, 'tests/acceptance'), { recursive: true });
+  fs.writeFileSync(
+    path.join(gp, 'openspec/specs/usage-reporting/spec.md'),
+    '# usage-reporting Specification\n\n## Purpose\n\nReports.\n\n## Requirements\n\n### Requirement: Schedule Export\n\n#### Scenario: on demand\n\n- **WHEN** a user asks\n- **THEN** a file is written\n- **Verified by** tests/acceptance/usage-reporting.schedule.test.ts\n\nCode: `src/usage-report/**`\n'
+  );
+  fs.writeFileSync(path.join(gp, 'src/usage-report/report.ts'), 'export const report = 1;\n');
+  fs.writeFileSync(path.join(gp, 'tests/acceptance/usage-reporting.schedule.test.ts'), 'test();\n');
+  const mkDelta = (id, cap) => {
+    fs.mkdirSync(path.join(gp, `openspec/changes/${id}/specs/${cap}`), { recursive: true });
+    fs.writeFileSync(
+      path.join(gp, `openspec/changes/${id}/specs/${cap}/spec.md`),
+      '## ADDED Requirements\n\n### Requirement: Extra\n\n#### Scenario: more\n\n- **WHEN** asked\n- **THEN** more happens\n- **Verified by** tests/acceptance/usage-reporting.extra.test.ts\n\nCode: `src/usage-report/**`\n'
+    );
+  };
+  mkDelta('a-batch', 'usage-reporting');
+  mkDelta('b-batch', 'usage-reporting');
+  fs.writeFileSync(path.join(gp, 'tests/acceptance/usage-reporting.extra.test.ts'), 'test();\n');
+  g(['add', '-A']);
+  g(['commit', '-qm', 'two parallel changes on one capability']);
+  let r = drift();
+  assert(r.code === 1 && /claim capability usage-reporting in parallel/.test(r.out), `parallel open changes on one capability must go red:\n${r.out}`);
+
+  fs.rmSync(path.join(gp, 'openspec/changes/b-batch'), { recursive: true, force: true });
+  mkDelta('b-batch', 'billing'); // different capability claims the same files
+  g(['add', '-A']);
+  g(['commit', '-qm', 'second capability claims the same files']);
+  r = drift();
+  assert(r.code === 1 && /claimed by 2 capabilities/.test(r.out), `cross-capability double claim must go red:\n${r.out}`);
+
+  fs.rmSync(path.join(gp, 'openspec/changes/b-batch'), { recursive: true, force: true });
+  g(['add', '-A']);
+  g(['commit', '-qm', 'single owner restored']);
+  r = drift();
+  assert(r.code === 0, `one capability plus its own open delta must be green:\n${r.out}`);
+  fs.rmSync(gp, { recursive: true, force: true });
+  return 'ownership: parallel changes and cross-capability globs fail; single owner passes';
 });
 
 // --- report -----------------------------------------------------------------

@@ -108,7 +108,9 @@ function specsIn(dir, acc = []) {
 }
 const rel = (p) => path.relative(root, p).split(path.sep).join('/');
 const livingSpecs = specsIn(path.join(root, 'openspec', 'specs')).map(rel);
-const deltaSpecs = specsIn(path.join(root, 'openspec', 'changes')).map(rel);
+const deltaSpecs = specsIn(path.join(root, 'openspec', 'changes'))
+  .map(rel)
+  .filter((r) => !r.startsWith('openspec/changes/archive/')); // archive = frozen history, never a claimant
 const allSpecs = [...livingSpecs, ...deltaSpecs];
 
 /** Resolve a pin the way OpenSpec layouts work: project root first (living
@@ -145,6 +147,14 @@ for (const specRel of allSpecs) {
     )
   );
 }
+
+// --- capability model: a living spec plus its open deltas are ONE spec line ---
+const changeOf = (specRel) => (specRel.match(/^openspec\/changes\/([^/]+)\//) ?? [])[1] ?? '';
+const capOf = (specRel) =>
+  specRel
+    .replace(/^openspec\/specs\//, '')
+    .replace(/^openspec\/changes\/[^/]+\/specs\//, '')
+    .replace(/\/spec\.md$/, '');
 const pinnedAbs = new Set(
   allSpecs.flatMap((s) => pinsOf.get(s).map((p) => p.resolved)).filter(Boolean)
 );
@@ -232,29 +242,45 @@ if (staged && isRepo) {
 const tracked = isRepo ? (git(['ls-files']) ?? '').split('\n').filter(Boolean) : [];
 
 if (isRepo) {
+  // applied specs must own real files (open deltas may point at future files)
   for (const specRel of livingSpecs) {
     const globs = codeGlobs.get(specRel);
     if (!globs.length) continue;
     const res = globs.map(globToRe);
-    const matches = tracked.filter((f) => res.some((re) => re.test(f)));
-    if (!matches.length) {
+    if (!tracked.some((f) => res.some((re) => re.test(f)))) {
       issues.push(`[L2] ${specRel} declares Code: ${globs.join(', ')} but no tracked file matches — fix the glob or remove the line`);
-      continue;
     }
+  }
+  // staleness is per CAPABILITY: the tip is the newest commit of the living
+  // spec or any open delta. Code may out-commit older parts of the line
+  // freely — that is what an in-flight change is.
+  const caps = new Map(); // cap -> { specRels: [], globs: [] }
+  for (const specRel of allSpecs) {
+    const cap = capOf(specRel);
+    if (!caps.has(cap)) caps.set(cap, { specRels: [], globs: [] });
+    const c = caps.get(cap);
+    c.specRels.push(specRel);
+    c.globs.push(...(codeGlobs.get(specRel) ?? []));
+  }
+  for (const [cap, { specRels, globs }] of caps) {
+    if (!globs.length) continue;
+    const res = globs.map(globToRe);
+    const matches = tracked.filter((f) => res.some((re) => re.test(f)));
+    if (!matches.length) continue;
     if (staged) {
       const stagedCode = matches.filter((f) => stagedSet.has(f));
-      if (stagedCode.length && !stagedSet.has(specRel)) {
-        issues.push(`[L2] staged code ${stagedCode.join(', ')} but ${specRel} is not in this commit — spec and code travel together`);
+      if (stagedCode.length && !specRels.some((s) => stagedSet.has(s))) {
+        issues.push(`[L2] staged code ${stagedCode.join(', ')} but no spec of ${cap} is in this commit — spec and code travel together (update the living spec or the change's delta)`);
       }
     } else {
-      const specC = lastCommit(specRel);
-      if (!specC) continue; // spec itself not committed yet — nothing to compare
+      const specCs = specRels.map(lastCommit).filter(Boolean);
+      if (!specCs.length) continue; // nothing committed yet — nothing to compare
       for (const f of matches) {
         const codeC = lastCommit(f);
-        // stale = the code's last commit moved past the spec's last commit
+        // stale = EVERY spec of the capability predates the code commit
         // (topology, not wall-clock: git timestamps have second resolution)
-        if (codeC && codeC !== specC && git(['merge-base', '--is-ancestor', specC, codeC]) === '') {
-          issues.push(`[L2] ${f} changed after ${specRel} last changed — update the spec (scenario or Code line) and commit them together`);
+        if (codeC && specCs.every((specC) => codeC !== specC && git(['merge-base', '--is-ancestor', specC, codeC]) === '')) {
+          issues.push(`[L2] ${f} changed after every spec of ${cap} last changed — update the spec (scenario or Code line) and commit them together`);
         }
       }
     }
@@ -291,25 +317,35 @@ if (isRepo && !staged) {
 }
 
 // ==============================================================================
-// O — single owner: a file claimed by more than one spec's Code: globs is an
-// unowned helper. Narrow the globs, or — once the helper carries its own
-// requirement — promote it to its own capability with its own acceptance test.
+// O — single owner, capability-aware: a file claimed by two capabilities'
+// Code: globs is an unowned helper. A living spec and its own open delta
+// overlapping is the mechanism (in-flight update), not drift. Two open
+// changes claiming one capability collide at apply — merge or serialize
+// with "Depends on:". archive/ is frozen history and never a claimant.
 // ==============================================================================
 if (isRepo) {
-  const owner = new Map(); // file -> Set(specRel)
+  const owner = new Map(); // file -> Map(cap -> Set(changeId | ''))
   for (const specRel of allSpecs) {
     const res = (codeGlobs.get(specRel) ?? []).map(globToRe);
     if (!res.length) continue;
     for (const f of tracked) {
-      if (res.some((re) => re.test(f))) {
-        if (!owner.has(f)) owner.set(f, new Set());
-        owner.get(f).add(specRel);
-      }
+      if (!res.some((re) => re.test(f))) continue;
+      if (!owner.has(f)) owner.set(f, new Map());
+      const byCap = owner.get(f);
+      const cap = capOf(specRel);
+      if (!byCap.has(cap)) byCap.set(cap, new Set());
+      byCap.get(cap).add(changeOf(specRel));
     }
   }
-  for (const [f, specs] of owner) {
-    if (specs.size > 1) {
-      issues.push(`[O] ${f} is claimed by ${specs.size} specs (${[...specs].join(', ')}) — narrow the Code: globs or promote the helper to its own capability`);
+  for (const [f, byCap] of owner) {
+    if (byCap.size > 1) {
+      issues.push(`[O] ${f} is claimed by ${byCap.size} capabilities (${[...byCap.keys()].join(', ')}) — one capability owns a file; narrow the Code: globs or give the shared helper its own capability`);
+    } else {
+      const [cap, changes] = [...byCap][0];
+      const open = [...changes].filter(Boolean);
+      if (open.length > 1) {
+        issues.push(`[O] ${f}: open changes ${open.join(', ')} claim capability ${cap} in parallel — merge them, or record "Depends on:" and land the follower after; overlapping open changes collide at apply`);
+      }
     }
   }
 }

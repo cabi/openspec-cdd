@@ -64,6 +64,13 @@ artifacts:
       that look related. Reuse an existing capability's exact path instead of
       introducing a near-duplicate name.
 
+      Work already in flight counts as "existing" too: run `openspec list`
+      for open changes before proposing. If one already claims this
+      behavior or these files, extend that change instead of opening a
+      twin — parallel changes on one capability collide at apply (the
+      drift guard fails them). Genuinely sequential follow-ups open as
+      their own change and record `Depends on: <change-id>`.
+
       Every change must either declare at least one capability (new or
       modified) or explicitly opt out of specs: `openspec validate` rejects a
       change with zero deltas unless the change's `.openspec.yaml` sets

@@ -57,9 +57,9 @@ step ③ plans fulfillment; apply performs it; archive discharges it.
 `openspec/scripts/spec-drift.mjs` keeps the index honest, nearest to where drift starts:
 
 - **L1 traceability** — every `Verified by` pin in every spec resolves to an existing file; every test under `tests/acceptance/` is pinned by some spec (no orphans, no broken pins).
-- **L2 staleness** — a requirement may carry `Code: <glob>` lines; if a matching file's last commit moved past the spec's last commit (by **topology**, not second-resolution timestamps), the spec is stale. Commits marked `Mechanical-Change: <reason>` (lint sweeps, codemods, framework updates) carry no contract information and don't move the clock.
+- **L2 staleness** — a requirement may carry `Code: <glob>` lines; freshness is measured **per capability**: the tip is the newest commit of the living spec *or any of its open deltas* — that's what an in-flight change is. Code that moved past every spec of its capability is stale. Commits marked `Mechanical-Change: <reason>` (lint sweeps, codemods, framework updates) carry no contract information and don't move the clock.
 - **M mechanical integrity** — a commit claiming to be mechanical must not touch `openspec/specs/` or the acceptance tests; otherwise "mechanical" is a smuggling route past the commit door.
-- **O single owner** — a file claimed by two specs' `Code:` globs is an unowned helper: narrow the globs or promote the helper to its own capability.
+- **O single owner (capability-aware)** — a file claimed by two *capabilities'* `Code:` globs is an unowned helper: narrow the globs or give the helper its own capability. A living spec overlapping **its own open delta** is the mechanism (in-flight update), not drift. Two open changes claiming one capability go red — merge them or record `Depends on:`. `archive/` is frozen history and never a claimant (applied changes don't re-claim their code forever).
 - **L3 scale** — a living change's task list past 12 tracked tasks is a decomposition signal, not a work plan: split the proposal (the Done When Traceability table is the split map) or record a `split-considered:` decision. The design gate T5 fires at >8 as foresight; L3 is the backstop. Archived changes are never nagged.
 
 | Door | Fires | Wiring |
@@ -77,7 +77,7 @@ The contract/implementation split answers all four — none of them is contract,
 | Change class | Layer | Rule |
 |---|---|---|
 | linter / codestyle | implementation | Style is never spec content; `verify by` may run the linter, CI runs it. A repo-wide `lint --fix` sweep commits with a `Mechanical-Change:` trailer: it can't touch specs or acceptance tests, and it ages no spec (M + L2 exemption). |
-| helper / shared code | implementation, **single owner** | A file is claimed by at most one spec's `Code:` glob (guard check O). A helper several capabilities use stays under its owner's glob — or, once it carries its own requirement, is promoted to its own capability with its own scenario + acceptance test. |
+| helper / shared code | implementation, **single owner** | A file is claimed by at most one capability's `Code:` glob (guard check O). A helper several capabilities use stays under its owner's glob — or, once it carries its own requirement, is promoted to its own capability with its own scenario + acceptance test. |
 | automatic framework changes / codemods | mechanical | Same trailer: contract untouched, staleness exempt. If the sweep changes behavior, the acceptance tests catch it — that is what they exist for — and the behavior part goes through the change loop like any change. |
 
 The trailer is self-certified but safe to trust: it only silences *staleness* (spec text), and a mechanical commit touching the contract layer is rejected outright. Behavior is arbitrated by acceptance tests — which no mechanical commit may edit.
@@ -154,7 +154,7 @@ rot and untestable prose.
 
 ```bash
 git clone <this-repo> && cd openspec-cdd
-node tests/smoke.mjs        # runs the full loop against a throwaway project, 24/24
+node tests/smoke.mjs        # runs the full loop against a throwaway project, 26/26
 ```
 
 Requirements: Node ≥ 20 and the OpenSpec repo cloned at `vendor/OpenSpec`
@@ -208,6 +208,8 @@ verifies:
 | S20 | C5 | split rule: a 17-task living change goes red (L3) with the split remediation; a recorded `split-considered:` decision passes |
 | S21 | C5 | archived changes are frozen history — a 20-task archive never trips L3 |
 | S22 | — | config rules parse as strings (the CLI never silently drops them), and the "source code stays clean — no spec markers" rule stays engraved |
+| S23 | C5 | capability lifecycle: open change → `archive` → follow-up change on the same capability all stay green (archived deltas stop claiming; in-flight delta + code + test in one commit is fresh) |
+| S24 | C5 | one capability, one owner: parallel open changes on a capability and cross-capability `Code:` double-claims go red; single owner + its own delta passes |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded
@@ -228,7 +230,7 @@ openspec/
     schema.yaml                  # proposal, specs, design gate, tasks + apply contract
     templates/{proposal,spec,design,tasks}.md
 tests/
-  smoke.mjs                      # 24 checks, C1–C5 + brownfield mapping + split rule
+  smoke.mjs                      # 26 checks, C1–C5 + brownfield mapping + split rule + capability lifecycle
   fixtures/{bad-ambiguous,good-verified}/
 docs/transcript.srt              # the source critique
 vendor/OpenSpec/                 # upstream repo for research + CLI (not committed)
