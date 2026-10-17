@@ -158,7 +158,7 @@ artifacts:
         threshold must hold (p95, retries, permissions) and a wrong design
         can silently violate it.
       - **T5 Parallel work**: more than one agent/person implements, or the
-        task list will exceed 8 tracked tasks.
+        task list will exceed 8 tracked tasks. (Past 12 the guard hard-fails — see the tasks step's scale rule.)
 
       If NO trigger fires: design.md contains ONLY the skip record - the
       five triage answers plus one sentence why design is trivial here. A
@@ -220,6 +220,37 @@ artifacts:
       - End with `## Done When Traceability`: a table row per proposal
       criterion - `| <criterion> | <task ids that verify it> |`. If a
       criterion has no task, add the task or fix the criterion.
+
+      Scale rule — the split (the guard enforces this as L3): if the task
+      list exceeds 12 tracked tasks, stop — do not write a longer file.
+      Long checklists are where execution becomes unreliable: mid-list
+      tasks get skipped, boxes get ticked for work not done. A long task
+      file is a decomposition signal, not a work plan.
+
+      The split procedure (every artifact already exists):
+      1. Read the Done When Traceability table — it is the split map.
+         Criteria traced to disjoint task sets are independent changes;
+         the task groups (## headings) are the cut lines.
+      2. Cut into N proposals, each with its own Done When subset, its own
+         spec delta, and at most 12 tracked tasks. The capability spec is
+         NOT split — each change carries its delta into the same spec.
+      3. Order them: a follow-on proposal records `Depends on: <id>`.
+         Every change must be independently green (its own acceptance
+         suite); a bad split surfaces as a change that cannot go green.
+      4. Supersede the original: move it to changes/archive/ unapplied,
+         with `Status: superseded by <ids>` in its proposal. Never delete
+         it — provenance, like `Extracted from:`.
+      Escape hatch: a genuinely atomic change that must exceed 12 tasks
+      records the decision instead: `<!-- split-considered: kept whole
+      because <reason> -->` in tasks.md. The guard passes a recorded
+      decision and fails an unrecorded one — an unconsidered split is an
+      unmade decision.
+
+      Apply protocol (mid-list reliability): work tasks strictly
+      top-to-bottom, one at a time. Tick a box only after its verification
+      passes, and re-read tasks.md after each tick. If the remaining list
+      still exceeds 12 tracked tasks, run the split procedure before
+      continuing.
 
       Anti-scope-creep rule: no task may exist without a spec requirement or
       Done When criterion that needs it. Improvements, refactors, and

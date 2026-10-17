@@ -60,6 +60,7 @@ step ③ plans fulfillment; apply performs it; archive discharges it.
 - **L2 staleness** — a requirement may carry `Code: <glob>` lines; if a matching file's last commit moved past the spec's last commit (by **topology**, not second-resolution timestamps), the spec is stale. Commits marked `Mechanical-Change: <reason>` (lint sweeps, codemods, framework updates) carry no contract information and don't move the clock.
 - **M mechanical integrity** — a commit claiming to be mechanical must not touch `openspec/specs/` or the acceptance tests; otherwise "mechanical" is a smuggling route past the commit door.
 - **O single owner** — a file claimed by two specs' `Code:` globs is an unowned helper: narrow the globs or promote the helper to its own capability.
+- **L3 scale** — a living change's task list past 12 tracked tasks is a decomposition signal, not a work plan: split the proposal (the Done When Traceability table is the split map) or record a `split-considered:` decision. The design gate T5 fires at >8 as foresight; L3 is the backstop. Archived changes are never nagged.
 
 | Door | Fires | Wiring |
 |---|---|---|
@@ -204,6 +205,8 @@ verifies:
 | S17 | C5 | Phase 0 cold start: a spec-less legacy repo passes all doors, `tests/acceptance/` is guarded from day one (an unpinned test dropped there goes red), and `spec-extract` maps unowned territory + extraction candidates via `--tests` |
 | S18 | C5 | Phase 1 extraction moves + pins existing tests in one commit; burn-down rises, and the drift guard immediately protects the extracted territory (code-only commit goes red) |
 | S19 | C5 | the brownfield playbook ships documented: strangler fig, honest-source rule, WANT-question, `Extracted from:` provenance, own-on-touch |
+| S20 | C5 | split rule: a 17-task living change goes red (L3) with the split remediation; a recorded `split-considered:` decision passes |
+| S21 | C5 | archived changes are frozen history — a 20-task archive never trips L3 |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded

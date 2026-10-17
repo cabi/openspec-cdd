@@ -30,6 +30,13 @@
 // --staged scopes the checks to the current index (the commit door):
 //   staged acceptance-test deletions, staged orphan acceptance tests, or staged
 //   code matching Code: globs fail unless the spec is updated in the same commit.
+// L3 scale (living changes): a task list past 12 tracked tasks is a
+//     decomposition signal, not a work plan — long checklists are where
+//     model execution stops being reliable (mid-list skips, phantom
+//     ticks). The split procedure lives in the schema's tasks
+//     instruction. A recorded `split-considered:` decision passes;
+//     archived changes are frozen history and are never nagged.
+//
 //
 // exit 0 = no drift · 1 = drift found · 2 = usage/setup error
 
@@ -303,6 +310,28 @@ if (isRepo) {
   for (const [f, specs] of owner) {
     if (specs.size > 1) {
       issues.push(`[O] ${f} is claimed by ${specs.size} specs (${[...specs].join(', ')}) — narrow the Code: globs or promote the helper to its own capability`);
+    }
+  }
+}
+
+// ==============================================================================
+// L3 — scale: a living change's task list past 12 tracked tasks. The design
+// gate (T5) fires at >8 as foresight; this is the backstop for when the gate
+// was skipped or wrong. The exception is explicit, not silent: a recorded
+// split-considered decision passes, matching the skip-record pattern.
+// ==============================================================================
+const TASK_LIMIT = 12;
+const changesDir = path.join(root, 'openspec', 'changes');
+if (fs.existsSync(changesDir)) {
+  for (const e of fs.readdirSync(changesDir, { withFileTypes: true })) {
+    if (!e.isDirectory() || e.name === 'archive') continue;
+    const tasksRel = `openspec/changes/${e.name}/tasks.md`;
+    if (!fs.existsSync(path.join(root, tasksRel))) continue;
+    if (staged && !stagedSet.has(tasksRel)) continue;
+    const text = fs.readFileSync(path.join(root, tasksRel), 'utf8');
+    const n = (text.match(/^\s*-\s+\[[ xX]\]/gm) ?? []).length;
+    if (n > TASK_LIMIT && !/split-considered:/i.test(text)) {
+      issues.push(`[L3] ${tasksRel} holds ${n} tracked tasks (> ${TASK_LIMIT}) — a long task file is a decomposition signal, not a work plan; split the proposal (the Done When Traceability table shows the cut lines) or record "<!-- split-considered: kept whole because <reason> -->"`);
     }
   }
 }

@@ -455,6 +455,48 @@ check('S19', 'C5', 'the brownfield playbook ships documented: strangler fig, hon
   assert(/spec-extract\.mjs/.test(readme), 'inventory tool not documented');
   return 'adoption strategy is documented, not tribal';
 });
+// --- S20–S21 (C5): the split rule — scale backstop for the task list --------
+function bloatedTasks(n) {
+  const lines = ['## 1. Export', '## 2. Scheduling', ''];
+  for (let i = 1; i <= n; i++) {
+    const g = i <= 7 ? 1 : 2;
+    const k = i <= 7 ? i : i - 7;
+    lines.push(`- [ ] ${g}.${k} Interface ${i} established, verify by npm test -- t${i}`);
+  }
+  return lines.join('\n') + '\n';
+}
+
+check('S20', 'C5', 'split rule: a living change past 12 tracked tasks is L3 drift until split or recorded', () => {
+  const { gp, g, drift } = initDriftRepo('drift-l3');
+  const schema = fs.readFileSync(path.join(repoRoot, 'openspec/schemas/lean-verified/schema.yaml'), 'utf8');
+  assert(/12 tracked tasks/.test(schema) && /split-considered/.test(schema) && /Depends on/.test(schema), 'schema must engrave the split procedure + escape hatch');
+  fs.mkdirSync(path.join(gp, 'openspec/changes/usage-report-v2'), { recursive: true });
+  fs.writeFileSync(path.join(gp, 'openspec/changes/usage-report-v2/tasks.md'), bloatedTasks(17));
+  g(['add', '-A']);
+  g(['commit', '-qm', 'bloated change']);
+  const red = drift();
+  assert(red.code === 1 && /\[L3\]/.test(red.out) && /decomposition signal/.test(red.out), `17-task change must go red with the remediation:\n${red.out}`);
+  fs.appendFileSync(path.join(gp, 'openspec/changes/usage-report-v2/tasks.md'), '\n<!-- split-considered: kept whole because export and scheduling share one seam -->\n');
+  g(['add', '-A']);
+  g(['commit', '-qm', 'record split decision']);
+  const green = drift();
+  assert(green.code === 0, `a recorded decision must pass:\n${green.out}`);
+  fs.rmSync(gp, { recursive: true, force: true });
+  return "scale backstop: the guard enforces the schema's own threshold; the exception costs one honest sentence";
+});
+
+check('S21', 'C5', 'archived changes are frozen history: a 20-task archive never trips L3', () => {
+  const { gp, g, drift } = initDriftRepo('drift-l3-archive');
+  fs.mkdirSync(path.join(gp, 'openspec/changes/archive/usage-report-v2'), { recursive: true });
+  fs.writeFileSync(path.join(gp, 'openspec/changes/archive/usage-report-v2/tasks.md'), bloatedTasks(20));
+  g(['add', '-A']);
+  g(['commit', '-qm', 'archive bloated history']);
+  const r = drift();
+  assert(r.code === 0 && !/L3/.test(r.out), `archives must never be nagged:\n${r.out}`);
+  fs.rmSync(gp, { recursive: true, force: true });
+  return 'the backstop polices living work, not history';
+});
+
 // --- report -----------------------------------------------------------------
 const width = 74;
 console.log(`\nlean-verified smoke tests  (project: ${path.basename(project)})`);
