@@ -211,10 +211,36 @@ verifies:
 | S23 | — | every `rules:` key matches a schema artifact id, and `openspec instructions --json` runs without "Unknown artifact ID" stdout pollution (run-3 finding) |
 | S23 | C5 | capability lifecycle: open change → `archive` → follow-up change on the same capability all stay green (archived deltas stop claiming; in-flight delta + code + test in one commit is fresh) |
 | S24 | C5 | one capability, one owner: parallel open changes on a capability and cross-capability `Code:` double-claims go red; single owner + its own delta passes |
+| S25 | C2/C5 | Holzborste findings engraved: satisfiability rule, test-contract migration, pi skills for the tools |
+| S26 | — | patch 2117 (pinned v1.14.3 @ c794978f): `new change` reports and persists the resolved schema — applied to the vendored CLI, rebuilt, and probed end-to-end against this repo's own schema |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded
 design-gate skip and pinned acceptance test).
+
+## Validated in the wild
+## Patching the vendored CLI
+
+Upstream bug [Fission-AI/OpenSpec#2117](https://github.com/Fission-AI/OpenSpec/issues/2117):
+`openspec new change` prints and persists `spec-driven` even when `config.yaml`
+selects a custom schema, because `root.defaultSchema` is hardcoded and the raw
+`--schema` flag (undefined when omitted) is persisted. Until it is fixed
+upstream, this repo carries a version-pinned patch:
+
+- `patches/openspec-2117-new-change-schema-label_v1.14.3.patch` — pinned to
+  upstream **v1.14.3 @ c794978f**; three hunks: resolve the schema from
+  `readProjectConfig(root).schema`, fall back to `root.defaultSchema`, and
+  persist the resolved value.
+- `scripts/apply-openspec-patches.sh` — idempotent applier (`npm run
+  patch:openspec`). If upstream drifts past the pin, it refuses with a rebase
+  hint instead of half-applying.
+- Smoke test **S26** applies the patch, rebuilds `vendor/OpenSpec`, and probes
+  `new change` end-to-end: the JSON payload, the persisted `.openspec.yaml`,
+  and the text output must all say the configured schema (`lean-verified`).
+
+To rebase after an upstream release: rebuild `vendor/OpenSpec` at the new pin,
+regenerate the diff into `patches/`, and update the pin in the script header,
+the filename, and this section.
 
 ## Validated in the wild
 

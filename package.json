@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node tests/smoke.mjs",
     "spec-drift": "node openspec/scripts/spec-drift.mjs",
-    "spec-extract": "node openspec/scripts/spec-extract.mjs"
+    "spec-extract": "node openspec/scripts/spec-extract.mjs",
+    "patch:openspec": "bash scripts/apply-openspec-patches.sh"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,29 @@
+diff --git a/src/commands/workflow/new-change.ts b/src/commands/workflow/new-change.ts
+index 9dc57fd..8494e3f 100644
+--- a/src/commands/workflow/new-change.ts
++++ b/src/commands/workflow/new-change.ts
+@@ -23,6 +23,7 @@ import {
+   isStoreSelectedRoot,
+ } from '../../core/root-selection.js';
+ import { printJson, statusFromError, validateSchemaExists } from './shared.js';
++import { readProjectConfig } from '../../core/project-config.js';
+ 
+ // -----------------------------------------------------------------------------
+ // Types
+@@ -143,13 +144,14 @@ export async function newChangeCommand(name: string | undefined, options: NewCha
+       validateSchemaExists(options.schema, projectRoot);
+     }
+ 
+-    const resolvedSchema = options.schema ?? root.defaultSchema;
++    const projectConfig = readProjectConfig(projectRoot);
++    const resolvedSchema = options.schema ?? projectConfig?.schema ?? root.defaultSchema;
+     if (spinner) {
+       spinner.start(`Creating change '${name}' with schema '${resolvedSchema}'...`);
+     }
+ 
+     const result = await createChange(projectRoot, name, {
+-      schema: options.schema,
++      schema: resolvedSchema,
+       defaultSchema: root.defaultSchema,
+       changesDir: root.changesDir,
+       metadata: {

@@ -627,6 +627,31 @@ check('S25', 'C2/C5', 'Holzborste findings engraved: satisfiability rule, test-c
   return 'findings 1, 2, 4 engraved in schema.yaml + tool skills shipped for pi agents';
 });
 
+// --- S26: version-pinned upstream patch — resolved schema, not the raw flag ----
+check('S26', '—', 'patch 2117 (pinned v1.14.3 @ c794978f): new change reports the resolved schema', () => {
+  const vendor = path.join(repoRoot, 'vendor', 'OpenSpec');
+  const apply = spawnSync('bash', [path.join(repoRoot, 'scripts', 'apply-openspec-patches.sh')], { encoding: 'utf8' });
+  assert(apply.status === 0, `patch script failed: ${apply.stdout}${apply.stderr}`);
+  const srcF = path.join(vendor, 'src', 'commands', 'workflow', 'new-change.ts');
+  const distF = path.join(vendor, 'dist', 'commands', 'workflow', 'new-change.js');
+  const needsBuild = !fs.existsSync(distF) || fs.statSync(srcF).mtimeMs > fs.statSync(distF).mtimeMs;
+  if (needsBuild) {
+    const build = ['pnpm run build', 'corepack pnpm run build']
+      .map((cmd) => spawnSync('bash', ['-c', cmd], { encoding: 'utf8', cwd: vendor }))
+      .find((r) => r.status === 0);
+    assert(build, 'patched but could not rebuild vendor/OpenSpec (pnpm run build failed)');
+  }
+  const json = cliRun(['new', 'change', 'probe-2117', '--json']);
+  assert(json.code === 0, `new change failed: ${json.out}`);
+  const payload = JSON.parse(json.out);
+  assert(payload.change.schema === 'lean-verified', `change record says schema ${JSON.stringify(payload.change.schema)}, expected lean-verified`);
+  const meta = fs.readFileSync(path.resolve(project, payload.change.path, '.openspec.yaml'), 'utf8');
+  assert(/lean-verified/.test(meta), 'persisted .openspec.yaml must name the resolved schema');
+  const txt = cliRun(['new', 'change', 'probe-2117-b']);
+  assert(/Schema: lean-verified/.test(txt.out), `text output must print the resolved schema, got: ${txt.out.split('\n').find((l) => l.startsWith('Schema:'))}`);
+  return needsBuild ? 'patch applied, CLI rebuilt, probe green' : 'patch already in place, probe green';
+});
+
 // --- report -----------------------------------------------------------------
 const width = 74;
 console.log(`\nlean-verified smoke tests  (project: ${path.basename(project)})`);
