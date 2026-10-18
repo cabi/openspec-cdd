@@ -147,52 +147,6 @@ The trailer is self-certified but safe to trust: it only silences *staleness*
 outright. Behavior is arbitrated by acceptance tests — which no mechanical
 commit may edit.
 
-### Where code-quality review, reuse, and refactoring live
-
-The drift guard polices contract, not DRY: nothing in L1–L3 mechanically stops
-five runs from producing five classes that each implement `add($a, $b)` under
-five different owners — check O sees glob overlap, not semantic duplication.
-Preventing that is split across the three moments where it actually occurs:
-
-**Architectural, beforehand — the design gate (T5).** Placement of shared code
-is decided here or nowhere: search-first goes specs → `Code:` globs → code
-grep, and the design names the *one* home for anything shared before
-implementation starts. Naming is architecture — "calculator-utils" vs
-"math-ops" vs "arithmetic" as three capabilities is how the reuse index rots.
-The promotion ladder:
-
-- **private detail** — one consumer: stays under its owner's glob, no spec
-- **shared implementation** — second consumer: *imported* from the owner,
-  never copied; the second consumer is the promotion trigger
-- **capability** — the day its behavior is contract (overflow policy,
-  rounding): its own requirement, scenario, `Verified by` pin
-
-**During implementation — the producer's loop.** Reuse-before-create is part
-of the done-condition, like lint: before writing a utility, search the
-affected owners' globs; a new function duplicating an owned or spec'd one is
-a defect, not a style issue. In agent terms this is the self-review task of
-every change: diff against the delta *and* against the existing code.
-
-**After the fact — refactoring is the mechanical class.** Merging the five
-`add` classes is a change with no spec delta: the `Mechanical-Change:`
-trailer applies (no contract edits, L2-exempt), and the acceptance tests
-staying green is the proof behavior was preserved — that is exactly what they
-exist for. The trigger usually comes from door 3: a duplication detector
-(copy-paste detector, structure similarity) is static analysis, same row of
-the table — deterministic verdicts fail the build, findings are triage that
-escalate into a refactor change.
-
-**Reviews.** A human or agent reviewer sits at the door 2→3 boundary
-(pre-merge). The reviewer's contract questions are answered by the guard; the
-reviewer's quality questions (naming, placement, duplication) are the
-design-gate questions re-asked of a diff — which is why they belong to the
-producer side, not to CI: CI can only re-run what the producer should have
-done.
-
-Honest limit: semantic duplication ("add" vs "sum" vs "plus") is not
-mechanically detectable. The spec tree is the reuse index, and the index is
-only as good as the design gate's naming discipline.
-
 ### Brownfield adoption — strangler fig, not big bang
 
 Existing projects have no specs, and every guard check is scoped by *ownership*
