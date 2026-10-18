@@ -22,6 +22,7 @@ rules:
     - No fired design without interfaces, rejected alternative, and risks; no skip without the recorded triage
   tasks:
     - Every task ends with "verify by <command, test, or observable check>"
+    - Implementation is done when the code is clean under the repo's lint and static-analysis checks and the pinned acceptance test passes - those checks run inside the implementer's loop and again at the doors, never as per-task verify-by pins
     - Phrase tasks as the interface they establish, never as an activity; they are worked red-green-refactor
     - Every Done When criterion traces to at least one task in the traceability table
     - No task without a requirement or Done When criterion that needs it

@@ -70,12 +70,43 @@ step ③ plans fulfillment; apply performs it; archive discharges it.
 
 Setup for door 2, once per clone: `git config core.hooksPath .githooks`
 
-### Where lint, codestyle, helpers, and framework sweeps live
+### Where lint, static analysis, helpers, and framework sweeps live
 
-The contract/implementation split answers all four — none of them is contract, so none of them belongs in a spec:
+None of these tools is contract: no lint rule, scanner finding, or codemod ever
+authors a spec delta, a scenario, or an acceptance criterion. But "not
+contract" does not mean "checked at the end" — each tool has **two roles at two
+moments**.
+
+**Producer-side — part of implementing.** Producing valid code belongs to the
+implement step. The implementer's loop is: write code → lint and static
+analysis clean → pinned acceptance test green. That is the done-condition of
+every task, stated once — here and in the injected tasks rules — never repeated
+as per-task `verify by` pins, which would just move the forty-lines-of-comments
+problem from source code into `tasks.md`.
+
+**Enforcement-side — at the doors.** The doors don't own these tools; they
+re-run them so a skipped producer loop becomes visible. Door 2 runs formatters
+and `lint --fix` beside the drift guard — style never enters the contract
+layer. Door 3 runs the linter and static-analysis jobs as machine verdicts
+beside the guard and the acceptance suite: a red lint job in CI is not a new
+event, it is proof the producer loop didn't happen.
+
+**Why they can never author contract — the oracle argument.** PHPStan markets
+itself as finding bugs "without writing tests", and it is an executable
+pass/fail check with a profile (rule levels), but it is not a predefined test
+suite. It proves properties over *all* executions by abstraction — types,
+control flow, nullability — instead of sampling behavior on concrete inputs;
+that is why it can produce false positives and why "clean" means no type
+errors, not no bugs. And its oracle is the language plus the contracts your
+signatures already declare: it knows `getUser(int $id): ?User` can return
+null; it can never know that user 42 must exist or that an order total
+includes VAT. Static analysis verifies the contracts the code already states;
+tests verify the contracts only a human can state. Behavior-affecting findings
+therefore escalate into the change loop as proposals, and acceptance tests
+remain the only executable form of business meaning.
 
 ```
-editor ── format-on-save · codestyle fixer        (implementation only, never contract)
+editor ── format-on-save · codestyle fixer      (producer-side: implementation)
   │
   ▼
 DOOR 1 · AUTHORING LOOP (agent + human) ──────────────────────────────────────
@@ -84,14 +115,15 @@ DOOR 1 · AUTHORING LOOP (agent + human) ─────────────
   foresight            Done-When     Verified by
        ▲                                            │
        │  ESCALATION (the only way tools enter):    ▼
-       │  a static finding or lint rule that   implement + acceptance
-       │  changes behavior/architecture        tests (tests/acceptance/)
-       │  re-enters here as a proposal
+       │  a static finding or lint rule that   implement ── lint and
+       │  changes behavior/architecture            typecheck clean in
+       │  re-enters here as a proposal         this loop, then the
+       │                                    pinned acceptance test green
   │
   ▼
 DOOR 2 · COMMIT (.githooks/pre-commit) ───────────────────────────────────────
   spec-drift guard: L1 pins · L2 staleness · M mechanical · O owner · L3 scale
-  lint --fix and formatters run here too — style, not contract
+  formatters and lint --fix re-run here — style, not contract
   codemod / framework sweep = `Mechanical-Change:` trailer
     ├─ ages no spec (L2-exempt)
     └─ M rejects the commit if it touches openspec/specs or acceptance tests
@@ -102,14 +134,18 @@ DOOR 3 · CI (machine verdicts only) ──────────────�
   red build ▶ opt-in agent triage ▶ diagnosis comment on the PR
 ```
 
-| Change class | Layer | Rule |
+| Tool class | Role | Rules |
 |---|---|---|
-| linter / codestyle | implementation | Style is never spec content; `verify by` may run the linter, CI runs it. A repo-wide `lint --fix` sweep commits with a `Mechanical-Change:` trailer: it can't touch specs or acceptance tests, and it ages no spec (M + L2 exemption). |
-| static analysis (type checks, security scanners) | implementation, CI verdicts | Deterministic failures fail the build beside the guard (door 3). Findings are triage, not contract: one that changes behavior enters the change loop as a proposal; one the team elevates to architecture becomes a requirement with a scenario. A repo-wide type-fix sweep is a `Mechanical-Change:` like lint. |
+| formatter / codestyle fixer | producer, implementation | Editor and implementer loop; style is never spec content. A repo-wide format sweep commits with a `Mechanical-Change:` trailer: it can't touch specs or acceptance tests, and it ages no spec (M + L2 exemption). |
+| linter | producer + door verdict | Part of the done-condition; `verify by` may pin it when a task exists to fix style. Doors 2 and 3 re-run it so a skipped producer loop is visible. |
+| static analysis (type checks, security scanners) | producer + door verdict | Part of the done-condition; deterministic failures fail the door-3 build beside the guard. Findings are triage, not contract: behavior-affecting ones enter the change loop as proposals; ones the team elevates to architecture become requirements with scenarios. A repo-wide type-fix sweep is mechanical like lint. |
 | helper / shared code | implementation, **single owner** | A file is claimed by at most one capability's `Code:` glob (guard check O). A helper several capabilities use stays under its owner's glob — or, once it carries its own requirement, is promoted to its own capability with its own scenario + acceptance test. |
-| automatic framework changes / codemods | mechanical | Same trailer: contract untouched, staleness exempt. If the sweep changes behavior, the acceptance tests catch it — that is what they exist for — and the behavior part goes through the change loop like any change. |
+| framework sweeps / codemods | mechanical class | Same trailer: contract untouched, staleness exempt. If the sweep changes behavior, the acceptance tests catch it — that is what they exist for — and the behavior part goes through the change loop like any change. |
 
-The trailer is self-certified but safe to trust: it only silences *staleness* (spec text), and a mechanical commit touching the contract layer is rejected outright. Behavior is arbitrated by acceptance tests — which no mechanical commit may edit.
+The trailer is self-certified but safe to trust: it only silences *staleness*
+(spec text), and a mechanical commit touching the contract layer is rejected
+outright. Behavior is arbitrated by acceptance tests — which no mechanical
+commit may edit.
 
 ### Brownfield adoption — strangler fig, not big bang
 

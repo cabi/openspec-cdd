@@ -519,9 +519,10 @@ check('S23', '—', 'config rules keys exist in the schema - the CLI never warns
   return `rules keys [${keys.join(', ')}] all match schema artifacts [${artifacts.join(', ')}]`;
 });
 // --- S22: injected rules must actually load ----------------------------------
-check('S22', '—', 'config rules parse as strings, and the no-inline-markers rule stays engraved', () => {
+check('S22', '—', 'config rules parse as strings; no-inline-markers and producer-side done-condition rules stay engraved', () => {
   const cfg = fs.readFileSync(path.join(repoRoot, 'openspec', 'config.yaml'), 'utf8');
   assert(/source code stays clean/.test(cfg) && /Code globs plus git history/.test(cfg), 'the rule that keeps spec markers out of source code must stay in config.yaml');
+  assert(/clean under the repo's lint and static-analysis checks and the pinned acceptance test passes/.test(cfg) && /never as per-task verify-by pins/.test(cfg), 'the producer-side done-condition rule must stay in config.yaml');
   const r = cliRun(['list']);
   assert(r.code === 0, `exit ${r.code}: ${r.out.slice(0, 300)}`);
   assert(
