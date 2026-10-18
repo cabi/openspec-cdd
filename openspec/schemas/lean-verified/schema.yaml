@@ -114,6 +114,10 @@ artifacts:
         an existing scenario.
       - End each capability's spec with `Code: <glob>` lines (one per line,
         e.g. `Code: src/billing/**`) naming the files this capability owns.
+        In a delta against an EXISTING capability the archive sync ignores the
+        delta's own Code lines (the living spec's are kept) - include them only
+        for new capabilities; when a delta changes which files a capability
+        owns, update the Code lines in the living spec's requirement context.
         The drift guard matches tracked files against these globs for its
         staleness and single-owner checks; a capability without a Code line
         guards nothing.
