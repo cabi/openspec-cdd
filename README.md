@@ -77,6 +77,7 @@ The contract/implementation split answers all four — none of them is contract,
 | Change class | Layer | Rule |
 |---|---|---|
 | linter / codestyle | implementation | Style is never spec content; `verify by` may run the linter, CI runs it. A repo-wide `lint --fix` sweep commits with a `Mechanical-Change:` trailer: it can't touch specs or acceptance tests, and it ages no spec (M + L2 exemption). |
+| static analysis (type checks, security scanners) | implementation, CI verdicts | Deterministic failures fail the build beside the guard (door 3). Findings are triage, not contract: one that changes behavior enters the change loop as a proposal; one the team elevates to architecture becomes a requirement with a scenario. A repo-wide type-fix sweep is a `Mechanical-Change:` like lint. |
 | helper / shared code | implementation, **single owner** | A file is claimed by at most one capability's `Code:` glob (guard check O). A helper several capabilities use stays under its owner's glob — or, once it carries its own requirement, is promoted to its own capability with its own scenario + acceptance test. |
 | automatic framework changes / codemods | mechanical | Same trailer: contract untouched, staleness exempt. If the sweep changes behavior, the acceptance tests catch it — that is what they exist for — and the behavior part goes through the change loop like any change. |
 
