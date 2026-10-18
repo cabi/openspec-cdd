@@ -593,6 +593,19 @@ check('S24', 'C5', 'one capability one owner: parallel open changes and cross-ca
   return 'ownership: parallel changes and cross-capability globs fail; single owner passes';
 });
 
+// --- S25: dogfood findings flow back — satisfiability, test-contract migration, tool skills
+check('S25', 'C2/C5', 'Holzborste findings engraved: satisfiability rule, test-contract migration, pi skills for the tools', () => {
+  const schema = fs.readFileSync(path.join(repoRoot, 'openspec', 'schemas', 'lean-verified', 'schema.yaml'), 'utf8');
+  assert(/Satisfiability rule/.test(schema) && /cannot hold\s+on the target environment is a spec bug/.test(schema), 'schema must reject scenarios that cannot hold on the target environment');
+  assert(/Test-contract migration/.test(schema) && /MODIFIED\s+requirement covering it/.test(schema) && /its own task/.test(schema), 'schema must name the test-contract migration pattern (MODIFIED requirement + tracked task)');
+  const driftSkill = fs.readFileSync(path.join(repoRoot, '.pi', 'skills', 'spec-drift', 'SKILL.md'), 'utf8');
+  assert(/\[L1\]/.test(driftSkill) && /\[L2\]/.test(driftSkill) && /Never bypass/.test(driftSkill) && /Mechanical-Change/.test(driftSkill), 'spec-drift skill must document verdicts, the no-bypass rule, and mechanical changes');
+  assert(/transient/i.test(driftSkill) && /archive commit/.test(driftSkill), 'spec-drift skill must document the transient L2 window after archive');
+  const extractSkill = fs.readFileSync(path.join(repoRoot, '.pi', 'skills', 'spec-extract', 'SKILL.md'), 'utf8');
+  assert(/% owned/.test(extractSkill) && /strangler/i.test(extractSkill), 'spec-extract skill must document the burn-down metric and strangler-fig loop');
+  return 'findings 1, 2, 4 engraved in schema.yaml + tool skills shipped for pi agents';
+});
+
 // --- report -----------------------------------------------------------------
 const width = 74;
 console.log(`\nlean-verified smoke tests  (project: ${path.basename(project)})`);

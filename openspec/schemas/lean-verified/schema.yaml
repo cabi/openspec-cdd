@@ -107,6 +107,12 @@ artifacts:
       - Delta operations with `##` headers: ADDED / MODIFIED (full updated
         requirement block) / REMOVED (with **Reason** and **Migration**) /
         RENAMED (FROM:/TO:).
+      - Test-contract migration: when this change legitimately breaks or
+        changes an existing acceptance test, the delta MUST carry a MODIFIED
+        requirement covering it AND the tasks must track the test rewrite as
+        its own task. Quietly editing an existing acceptance test inside a
+        feature task is drift - the guard sees a spec whose pinned test no
+        longer matches the requirement.
 
       Quantification rules (the anti-"bi-weekly" rules):
       - Every interval, amount, limit, and threshold carries a number and a
@@ -127,6 +133,11 @@ artifacts:
       internal classes or functions, so they survive every internal
       redesign. Unit tests are not pinned here; they are born during apply
       (see tasks).
+      Satisfiability rule: a scenario that depends on geometry, quotas, or
+      timing must state its measured budget (viewport height minus
+      scroll-padding, request quota, p95 in ms). A scenario that cannot hold
+      on the target environment is a spec bug - reject it at propose time,
+      not as a red acceptance test at apply time.
 
       Content rules:
       - Spec a behavior contract, not an implementation: observable behavior,
