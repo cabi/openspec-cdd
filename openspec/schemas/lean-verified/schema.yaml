@@ -104,6 +104,9 @@ artifacts:
         4 hashtags - 3 hashtags or bullets fail silently.
       - New capabilities: the delta's first section is `## Purpose` (1-2
         sentences, 50+ characters, or `--strict` flags it as too brief).
+        Existing capabilities: omit `## Purpose` - the archive sync silently
+        drops it with a warning ("delta Purpose ignored; <capability> already
+        has one"), so it never reaches the living spec.
       - Delta operations with `##` headers: ADDED / MODIFIED / REMOVED (with **Reason** and **Migration**) /
         RENAMED (FROM:/TO:). A MODIFIED block must restate the requirement with
         EVERY scenario the living spec already has, plus the new or changed

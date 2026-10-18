@@ -1,10 +1,10 @@
 # Spec Delta
 
 ## Purpose
-
-<!-- New capabilities only, 1-2 sentences (50+ characters): what this
-     capability is for. Omit for deltas against an existing capability. -->
-
+**Only for new capabilities** - omit this section entirely when the delta
+targets an existing capability: the archive sync drops it with a warning.
+<!-- New capabilities: 1-2 sentences (50+ characters) on what this capability
+     is for. -->
 ## ADDED Requirements
 
 <!-- One behavior per requirement. Description under 500 characters, SHALL/MUST
