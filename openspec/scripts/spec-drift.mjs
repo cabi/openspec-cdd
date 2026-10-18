@@ -35,6 +35,18 @@
 //     model execution stops being reliable (mid-list skips, phantom
 //     ticks). The split procedure lives in the schema's tasks
 //     instruction. A recorded `split-considered:` decision passes;
+//
+// A architectural decisions (openspec/decisions/, full scan) — memory beside
+//     the contract, created only when a decision is hard to reverse,
+//     surprising without context, a real trade-off, and crosses capability
+//     boundaries:
+//   A0 lifecycle — status is valid, supersedes resolves, and a superseded
+//     target actually flipped its status in the same commit
+//   A1 citation on touch — an open change whose code overlaps an accepted
+//     decision's `code:` globs must cite that ADR (follow it) or supersede it
+//   A2 staleness — code under a decision's globs moving past the decision is
+//     silent rot: reconfirm (touch the decision in the same commit) or
+//     supersede it with a new ADR
 //     archived changes are frozen history and are never nagged.
 //
 //
@@ -368,6 +380,108 @@ if (fs.existsSync(changesDir)) {
     const n = (text.match(/^\s*-\s+\[[ xX]\]/gm) ?? []).length;
     if (n > TASK_LIMIT && !/split-considered:/i.test(text)) {
       issues.push(`[L3] ${tasksRel} holds ${n} tracked tasks (> ${TASK_LIMIT}) — a long task file is a decomposition signal, not a work plan; split the proposal (the Done When Traceability table shows the cut lines) or record "<!-- split-considered: kept whole because <reason> -->"`);
+    }
+  }
+}
+
+// ==============================================================================
+// A — architectural decisions (openspec/decisions/): the memory that replaces
+// osmosis. Beside the contract tree in form, visible to the guard in fact.
+// ==============================================================================
+const decisionsDir = path.join(root, 'openspec', 'decisions');
+const adrs = [];
+if (fs.existsSync(decisionsDir)) {
+  for (const e of fs.readdirSync(decisionsDir, { withFileTypes: true })) {
+    if (!e.isFile() || !e.name.endsWith('.md')) continue;
+    const num = e.name.match(/^(\d{4})-/);
+    if (!num) continue;
+    const fileRel = `openspec/decisions/${e.name}`;
+    const text = fs.readFileSync(path.join(root, fileRel), 'utf8');
+    const fm = text.match(/^---\n([\s\S]*?)\n---/);
+    const header = {};
+    for (const line of (fm ? fm[1] : '').split('\n')) {
+      const kv = line.match(/^([\w-]+):\s*(.+)$/);
+      if (kv) header[kv[1]] = kv[2].trim();
+    }
+    adrs.push({
+      id: `ADR-${num[1]}`,
+      fileRel,
+      status: (header.status ?? 'accepted').toLowerCase(),
+      supersedes: header.supersedes ?? null,
+      globs: (header.code ?? '').split(/[,\s]+/).filter(Boolean).map((g) => g.replace(/`/g, '')),
+    });
+  }
+}
+const adrByNum = new Map(adrs.map((a) => [a.id.replace(/^ADR-/, ''), a]));
+
+if (adrs.length) {
+  // A0 — lifecycle integrity
+  for (const a of adrs) {
+    if (!['accepted', 'superseded', 'draft', 'proposed'].includes(a.status)) {
+      issues.push(`[A0] ${a.fileRel} has unknown status "${a.status}" — use accepted, superseded, draft, or proposed`);
+    }
+    if (a.supersedes) {
+      const target = adrByNum.get(a.supersedes.replace(/^ADR-/, ''));
+      if (!target) {
+        issues.push(`[A0] ${a.fileRel} supersedes ${a.supersedes} but no such decision exists`);
+      } else if (target.status === 'accepted') {
+        issues.push(`[A0] ${a.fileRel} supersedes ${target.id} but ${target.id} is still accepted — flip its status to superseded in the same commit`);
+      }
+    }
+  }
+
+  const acceptedAdrs = adrs.filter((a) => a.status === 'accepted' && a.globs.length);
+  const filesOf = (globs) => {
+    const res = globs.map(globToRe);
+    return tracked.filter((f) => res.some((re) => re.test(f)));
+  };
+
+  // A1 — citation on touch: follow it or supersede it, never drift past it
+  if (!staged) {
+    const changeFiles = new Map(); // change -> Set(tracked files its deltas claim)
+    for (const specRel of deltaSpecs) {
+      const res = (codeGlobs.get(specRel) ?? []).map(globToRe);
+      if (!res.length) continue;
+      const change = specRel.split('/')[2];
+      for (const f of tracked) {
+        if (res.some((re) => re.test(f))) {
+          if (!changeFiles.has(change)) changeFiles.set(change, new Set());
+          changeFiles.get(change).add(f);
+        }
+      }
+    }
+    for (const [change, files] of changeFiles) {
+      const cdir = path.join(root, 'openspec', 'changes', change);
+      const docs = fs
+        .readdirSync(cdir, { withFileTypes: true })
+        .filter((e) => e.isFile() && e.name.endsWith('.md'))
+        .map((e) => fs.readFileSync(path.join(cdir, e.name), 'utf8'))
+        .join('\n');
+      for (const a of acceptedAdrs) {
+        const governed = new Set(filesOf(a.globs));
+        const overlap = [...files].filter((f) => governed.has(f));
+        if (!overlap.length) continue;
+        if (!docs.includes(a.id)) {
+          issues.push(`[A1] change ${change} touches code governed by ${a.id} (${a.fileRel}; e.g. ${overlap[0]}) — cite "${a.id}" in the proposal (follow it) or supersede the decision first`);
+        }
+      }
+    }
+  }
+
+  // A2 — staleness: silent rot detection. Same topology trick as L2: the
+  // decision is stale when the code commit is a descendant of the decision's
+  // last commit. Reconfirming = touching the decision in the same commit.
+  if (isRepo && !staged) {
+    for (const a of acceptedAdrs) {
+      const adrC = lastCommit(a.fileRel);
+      if (!adrC) continue; // decision not committed yet — nothing to compare
+      for (const f of filesOf(a.globs)) {
+        const codeC = lastCommit(f);
+        if (codeC && adrC !== codeC && git(['merge-base', '--is-ancestor', adrC, codeC]) === '') {
+          issues.push(`[A2] ${f} moved after ${a.id} was last touched — silent rot: reconfirm the decision (update ${a.fileRel} in this commit) or supersede it with a new ADR that marks this one superseded`);
+          break; // one finding per decision is enough to ring the bell
+        }
+      }
     }
   }
 }

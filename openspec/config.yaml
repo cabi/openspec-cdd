@@ -20,6 +20,9 @@ rules:
   design:
     - The design gate decision is mechanical triage, not taste - record all five answers with evidence
     - No fired design without interfaces, rejected alternative, and risks; no skip without the recorded triage
+    - 'An ADR is created only when all four hold - hard to reverse, surprising without context, a real trade-off, and crossing capability boundaries; anything less is proposal content and dies with its change'
+    - 'A change whose Code globs touch an accepted decision''s code must cite that ADR in its proposal - follow it or supersede it; the guard enforces this as A1'
+    - 'Challenge new vocabulary against openspec/GLOSSARY.md at the design gate - one canonical term per concept with an Avoid list; the glossary is language only, never implementation detail'
   tasks:
     - Every task ends with "verify by <command, test, or observable check>"
     - Implementation is done when the code is clean under the repo's lint and static-analysis checks and the pinned acceptance test passes - those checks run inside the implementer's loop and again at the doors, never as per-task verify-by pins

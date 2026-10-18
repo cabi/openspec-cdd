@@ -680,6 +680,89 @@ check('S28', '—', 'patches: apply/explore/propose/sync/update skill templates 
   return '5 templates patched: /opsx-* names, no continue-change ghosts, no generatedBy';
 });
 
+// --- S30: ADR guard checks A0/A1/A2 ------------------------------------------
+check('S30', '—', 'decisions are guarded - citation on touch, staleness, lifecycle', () => {
+  const { gp, g, drift } = initDriftRepo('drift-adr');
+  // accepted decision governing src/** — committed after the code, so fresh
+  const decDir = path.join(gp, 'openspec/decisions');
+  fs.mkdirSync(decDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(decDir, '0001-usage-domain.md'),
+    '---\nstatus: accepted\ncode: src/**\n---\n# Usage domain shape\n\nOne seam, report first.\n'
+  );
+  g(['add', '-A']);
+  g(['commit', '-qm', 'record decision 0001']);
+  let r = drift();
+  assert(r.code === 0, `fresh decision must be clean:\n${r.out}`);
+
+  // A1: open change overlapping the globs without citing the ADR
+  const chDir = path.join(gp, 'openspec/changes/add-export/specs/usage-reporting');
+  fs.mkdirSync(chDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(chDir, 'spec.md'),
+    '## ADDED Requirements\n\n### Requirement: Batch Export\n\n#### Scenario: nightly\n\n- **WHEN** the job runs\n- **THEN** a batch is written\n\nCode: `src/usage-report/**`\n'
+  );
+  g(['add', '-A']);
+  g(['commit', '-qm', 'open change add-export']);
+  r = drift();
+  assert(r.code === 1 && /\[A1\].*governed by ADR-0001/.test(r.out), `uncited decision must go red as A1:\n${r.out}`);
+
+  // citing it in the proposal satisfies A1
+  fs.writeFileSync(
+    path.join(gp, 'openspec/changes/add-export/proposal.md'),
+    '# Proposal\n\nFollows ADR-0001 (usage domain shape): export rides the same seam.\n'
+  );
+  g(['add', '-A']);
+  g(['commit', '-qm', 'cite decision in proposal']);
+  r = drift();
+  assert(r.code === 0, `cited decision must be clean:\n${r.out}`);
+
+  // A2: code under the globs moves without reconfirming the decision
+  fs.appendFileSync(path.join(gp, 'src/usage-report/report.ts'), '// v2\n');
+  fs.appendFileSync(path.join(gp, 'openspec/specs/usage-reporting/spec.md'), '\n'); // keep L2 quiet
+  g(['add', '-A']);
+  g(['commit', '-qm', 'code-only drift past decision']);
+  r = drift();
+  assert(r.code === 1 && /\[A2\].*ADR-0001/.test(r.out), `stale decision must go red as A2:\n${r.out}`);
+
+  // reconfirm = touch the decision in the same commit as the code
+  fs.appendFileSync(path.join(decDir, '0001-usage-domain.md'), '\nReconfirmed after export change.\n');
+  g(['add', '-A']);
+  g(['commit', '-qm', 'reconfirm decision 0001']);
+  r = drift();
+  assert(r.code === 0, `reconfirmed decision must be clean:\n${r.out}`);
+
+  // A0: superseding without flipping the target's status
+  fs.writeFileSync(
+    path.join(decDir, '0002-other-seam.md'),
+    '---\nstatus: accepted\ncode: docs/**\nsupersedes: ADR-0001\n---\n# Other seam\n\nDocs only, no code overlap.\n'
+  );
+  g(['add', '-A']);
+  g(['commit', '-qm', 'add decision 0002 superseding 0001']);
+  r = drift();
+  assert(r.code === 1 && /\[A0\].*0001.*still accepted/.test(r.out), `unflipped supersede must go red as A0:\n${r.out}`);
+
+  fs.writeFileSync(path.join(decDir, '0001-usage-domain.md'), '---\nstatus: superseded\ncode: src/**\n---\n# Usage domain shape\n\nSuperseded by ADR-0002.\n');
+  g(['add', '-A']);
+  g(['commit', '-qm', 'flip 0001 to superseded']);
+  r = drift();
+  assert(r.code === 0, `completed supersede must be clean:\n${r.out}`);
+  return 'A1 red → cite → A2 red → reconfirm → A0 red → flip';
+});
+
+// --- S31: arch-extract induces structure and ingests decisions ----------------
+check('S31', '—', 'arch-extract derives the as-built report and treats decisions as ground truth', () => {
+  const jr = spawnSync('node', [path.join(repoRoot, 'openspec/scripts/arch-extract.mjs'), '--json'], { cwd: repoRoot, encoding: 'utf8' });
+  assert(jr.status === 0, `arch-extract --json failed:\n${jr.stderr}`);
+  const parsed = JSON.parse(jr.stdout);
+  assert(Array.isArray(parsed.derived.taxonomy?.roots), 'taxonomy roots must be an array');
+  const dec = (parsed.derived.decisions ?? []).find((d) => d.location === 'openspec/decisions/0001-zero-dependency-node-tooling.md');
+  assert(dec && dec.status === 'accepted' && /openspec\/scripts\/\*\*/.test(dec.code), 'our dogfood ADR must be ingested as ground truth');
+  const tr = spawnSync('node', [path.join(repoRoot, 'openspec/scripts/arch-extract.mjs')], { cwd: repoRoot, encoding: 'utf8' });
+  assert(tr.status === 0 && /interpreted/i.test(tr.stdout) && /ground truth/.test(tr.stdout), 'text report must keep derived and interpreted honestly separated');
+  return 'derived/interpreted separation + ADR ingestion verified on this repo';
+});
+
 // --- report -----------------------------------------------------------------
 const width = 74;
 console.log(`\nlean-verified smoke tests  (project: ${path.basename(project)})`);

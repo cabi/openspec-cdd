@@ -147,6 +147,65 @@ The trailer is self-certified but safe to trust: it only silences *staleness*
 outright. Behavior is arbitrated by acceptance tests — which no mechanical
 commit may edit.
 
+
+### Architectural decisions and the glossary — memory beside the contract
+
+Specs are promises, tasks are plans, tests are proof — none of them remember
+*why*. A codebase where the reasons live only in osmosis loses them at the
+first team rotation. Two artifacts fix that, both lazily created, both guarded:
+
+**`openspec/decisions/` — ADRs.** One decision per file, minimal format:
+
+```markdown
+---
+status: accepted          # accepted | superseded | draft | proposed
+code: src/usage-report/** # globs this decision governs
+supersedes: ADR-0004      # only when replacing one
+---
+# Title
+
+One paragraph: context, options, why this one. Longer only if it earns it.
+```
+
+Create an ADR only when **all four** hold — hard to reverse, surprising
+without context, a real trade-off, and crossing capability boundaries.
+Anything less is proposal content and dies with its change. The lifecycle is
+create → cite → supersede → freeze; superseding means a new ADR that
+`supersedes:` the old one, with the old one flipped to `status: superseded`
+*in the same commit*. Existing ADRs elsewhere (e.g. `docs/adr/`) stay where
+they are — add a thin index entry under `openspec/decisions/` carrying their
+`code:` globs so the guard sees them. Archive-time ingestion: `arch-extract`
+labels every induced decision `derived` vs `interpreted`, so a scanner's
+suggestion never masquerades as a person's conclusion.
+
+**Guard checks** (full scan, beside L/M/O):
+
+- **A0 — lifecycle**: status is valid, `supersedes:` resolves, and a
+  superseded target actually flipped status in the same commit
+- **A1 — citation on touch**: an open change whose code overlaps an accepted
+  decision's globs must cite that ADR in its proposal — follow it or
+  supersede it, never drift past it silently
+- **A2 — staleness**: code under a decision's globs moving past the decision
+  is silent rot. Reconfirm (touch the decision in the same commit) or
+  supersede. The on-touch contradiction audit *is* A2; induced-vs-recorded
+  disagreements surface in the `arch-extract` report — machines detect,
+  humans and agents resolve.
+
+**`openspec/GLOSSARY.md` — the language.** One canonical term per concept,
+tight definitions, and an `_Avoid_` list marking the graves of rejected
+synonyms. Consulted at the design gate (step ① challenges new vocabulary
+against it) — language only, never implementation detail, and deliberately
+without a `capability:` field: the spec tree is already the index, and a
+second home for capability names would be write-coupling, not coverage.
+Traceability stays where it belongs: markdown in the openspec tree, zero
+spec markers in source code.
+
+**`arch-extract` — Phase 0 for structure.** The sibling of `spec-extract`
+(which maps contract) maps the as-built architecture: deterministic scanners
+for manifests, directory taxonomy, entrypoints, import adjacency, and churn
+clusters (`derived`), an `interpreted` section only a human or agent fills,
+and recorded decisions ingested as ground truth. `npm run arch-extract`, or
+`--json` for the same evidence machine-readable.
 ### Brownfield adoption — strangler fig, not big bang
 
 Existing projects have no specs, and every guard check is scoped by *ownership*
@@ -280,6 +339,8 @@ verifies:
 | S26 | — | patch 2117 (pinned v1.14.3 @ c794978f): `new change` reports and persists the resolved schema — applied to the vendored CLI, rebuilt, and probed end-to-end against this repo's own schema |
 | S27 | — | the generated `openspec-archive-change` skill is the lean-verified one, shipped as a version-pinned patch of the vendored template (runs 3-5 wording) |
 | S28 | — | the other five skill templates (apply/explore/propose/sync/update) ship as pinned patches too: `/opsx-*` names, no never-installed `continue-change` ghosts, no init-time bookkeeping |
+| S30 | — | ADR guard checks: A1 red on uncited touch → cite → A2 red on staleness → reconfirm → A0 red on half-done supersede → flip |
+| S31 | — | arch-extract derives the as-built report (derived/interpreted separated) and ingests decisions as ground truth |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded
