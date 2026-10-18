@@ -661,8 +661,22 @@ check('S27', '—', 'patch: the generated openspec-archive-change skill is the l
   assert(/frozen history/.test(skill), 'template must state archived changes are frozen history');
   assert(/git add openspec\//.test(skill), 'template must stage openspec/ only in the archive commit');
   assert(!/Store selection:/.test(skill) && !/allowed-tools:/.test(skill), 'upstream ceremony text must be gone from the template');
-  assert(fs.readFileSync(path.join(repoRoot, 'patches', 'openspec-archive-skill-lean_v1.14.3.patch'), 'utf8').length > 0, 'the pinned patch file must exist');
+  assert(fs.readFileSync(path.join(repoRoot, 'patches', 'openspec-archive-change-skill-lean_v1.14.3.patch'), 'utf8').length > 0, 'the pinned patch file must exist');
   return 'vendored template == the skill dogfooded in runs 3-5';
+});
+
+// --- S28: the five other lean skills ship as pinned patches -------------------
+check('S28', '—', 'patches: apply/explore/propose/sync/update skill templates cross-reference only real commands', () => {
+  const skills = ['openspec-apply-change', 'openspec-explore', 'openspec-propose', 'openspec-sync-specs', 'openspec-update-change'];
+  for (const s of skills) {
+    const tpl = fs.readFileSync(path.join(repoRoot, 'vendor', 'OpenSpec', 'skills', s, 'SKILL.md'), 'utf8');
+    assert(!tpl.includes('generatedBy:'), `${s}: template must not carry init-time bookkeeping`);
+    assert(!tpl.includes('/openspec-continue-change'), `${s}: must not reference the never-installed continue-change skill`);
+    assert(tpl.includes('/opsx-'), `${s}: must reference the real /opsx-* prompts`);
+    assert(!tpl.includes(`/openspec-${s.replace('openspec-', '')} `), `${s}: must not reference its own stale long command name`);
+    assert(fs.existsSync(path.join(repoRoot, 'patches', `${s}-skill-lean_v1.14.3.patch`)), `${s}: pinned patch file must exist`);
+  }
+  return '5 templates patched: /opsx-* names, no continue-change ghosts, no generatedBy';
 });
 
 // --- report -----------------------------------------------------------------

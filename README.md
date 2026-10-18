@@ -214,6 +214,7 @@ verifies:
 | S25 | C2/C5 | Holzborste findings engraved: satisfiability rule, test-contract migration, pi skills for the tools |
 | S26 | — | patch 2117 (pinned v1.14.3 @ c794978f): `new change` reports and persists the resolved schema — applied to the vendored CLI, rebuilt, and probed end-to-end against this repo's own schema |
 | S27 | — | the generated `openspec-archive-change` skill is the lean-verified one, shipped as a version-pinned patch of the vendored template (runs 3-5 wording) |
+| S28 | — | the other five skill templates (apply/explore/propose/sync/update) ship as pinned patches too: `/opsx-*` names, no never-installed `continue-change` ghosts, no init-time bookkeeping |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded
@@ -232,11 +233,15 @@ upstream, this repo carries a version-pinned patch:
   upstream **v1.14.3 @ c794978f**; three hunks: resolve the schema from
   `readProjectConfig(root).schema`, fall back to `root.defaultSchema`, and
   persist the resolved value.
-- `patches/openspec-archive-skill-lean_v1.14.3.patch` — replaces the generated
-  `openspec-archive-change` skill with the lean-verified one (mechanical finish
-  step, archive+commit as one stop, staged `openspec/` only, frozen history).
-  This is the exact skill wording dogfooded in runs 3-5; upstream's template
-  buries it in store-selection ceremony.
+- `patches/openspec-archive-change-skill-lean_v1.14.3.patch` — replaces the
+  generated `openspec-archive-change` skill with the lean-verified one
+  (mechanical finish step, archive+commit as one stop, staged `openspec/` only,
+  frozen history): the exact wording dogfooded in runs 3-5.
+- `patches/openspec-{apply-change,explore,propose,sync-specs,update-change}-skill-lean_v1.14.3.patch`
+  — fix the other five generated skills' stale cross-references: they point at
+  long command names (`/openspec-apply-change`) while the shipped prompts are
+  `/opsx-*`, and at `/openspec-continue-change`, a skill `init` never installs
+  into projects.
 - `scripts/apply-openspec-patches.sh` — applies every patch in `patches/`,
   idempotently (`npm run patch:openspec`). A patch that neither applies nor
   reverse-applies means upstream moved past the pin: it refuses with a rebase

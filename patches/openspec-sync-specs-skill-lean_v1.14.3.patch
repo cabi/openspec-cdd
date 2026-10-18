@@ -1,0 +1,13 @@
+diff --git a/skills/openspec-sync-specs/SKILL.md b/skills/openspec-sync-specs/SKILL.md
+index 5683f84..5417613 100644
+--- a/skills/openspec-sync-specs/SKILL.md
++++ b/skills/openspec-sync-specs/SKILL.md
+@@ -41,7 +41,7 @@ In both branches, never create the root as a side effect: do not run `openspec i
+ 
+    When prompting, show changes that have delta specs (under `specs/` directory).
+ 
+-   Always announce: "Using change: <name>" and how to override (e.g., `/openspec-sync-specs <other>`).
++   Always announce: "Using change: <name>" and how to override (e.g., `/opsx-sync <other>`).
+ 
+ 2. **Resolve change context**
+ 

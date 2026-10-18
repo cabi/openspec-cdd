@@ -7,9 +7,13 @@
 #   openspec-2117-new-change-schema-label_v1.14.3.patch
 #     `new change` must report and persist the RESOLVED schema (config.yaml's
 #     schema:), not the raw --schema flag. Upstream #2117.
-#   openspec-archive-skill-lean_v1.14.3.patch
-#     replaces the generated openspec-archive-change skill with the lean-verified
-#     one (mechanical finish step, archive+commit as one stop, frozen history).
+#   openspec-<skill>-skill-lean_v1.14.3.patch (6 files)
+#     replaces the generated openspec-* skills with the lean-verified set:
+#     archive (mechanical finish, one-stop archive+commit), and the other five
+#     (apply, explore, propose, sync, update) whose upstream templates
+#     cross-reference stale long command names (/openspec-apply-change instead
+#     of the shipped /opsx-* prompts) and /openspec-continue-change, a skill
+#     init never installs into projects.
 #
 # Idempotent: a patch that is already applied (reverse applies cleanly) is
 # skipped. If a patch neither applies nor reverse-applies, upstream moved past
