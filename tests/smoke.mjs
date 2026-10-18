@@ -680,6 +680,16 @@ check('S28', '—', 'patches: apply/explore/propose/sync/update skill templates 
   return '5 templates patched: /opsx-* names, no continue-change ghosts, no generatedBy';
 });
 
+// --- S29: reuse and placement rules stay engraved ------------------------------
+check('S29', '—', 'one home per shared utility - promotion at the second consumer, reuse before create, refactors are mechanical', () => {
+  const cfg = fs.readFileSync(path.join(repoRoot, 'openspec', 'config.yaml'), 'utf8');
+  assert(/second consumer is the promotion trigger/.test(cfg), 'the design-gate placement rule (promotion ladder) must stay in config.yaml');
+  assert(/Reuse before create/.test(cfg) && /defect, not a style issue/.test(cfg), 'the producer-side reuse rule must stay in config.yaml');
+  const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
+  assert(/Where code-quality review, reuse, and refactoring live/.test(readme), 'README must keep the code-quality placement section');
+  return 'five duplicate add-classes = design-gate miss + producer miss, not a guard failure';
+});
+
 // --- report -----------------------------------------------------------------
 const width = 74;
 console.log(`\nlean-verified smoke tests  (project: ${path.basename(project)})`);
