@@ -215,6 +215,15 @@ Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded
 design-gate skip and pinned acceptance test).
 
+## Validated in the wild
+
+The full loop (schema + guard + hooks + `openspec init --agent pi` skills) was
+dogfooded twice on the same product — once by the schema's author, once by four
+cold-start agents that had never seen the project. Result: near-identical
+contracts (17 requirements each), 100% first-try `validate --strict`, zero
+guard blocks, zero hook bypasses. Numbers, per-agent detail, and the findings
+ledger: **[case-study-holzborste.md](case-study-holzborste.md)**.
+
 ## Layout
 
 ```
