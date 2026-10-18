@@ -23,3 +23,9 @@ The system SHALL <exactly one observable behavior with numbers and units>.
 - **WHEN** <exact trigger or input>
 - **THEN** <exactly observable outcome>
 - **Verified by** tests/acceptance/<capability>.<scenario>.test.ts
+
+<!-- After the requirements, end the file with Code lines (one per line, bare,
+     not bullets) naming the files this capability owns - the drift guard
+     matches them for staleness (L2) and single-owner (O) checks:
+
+     Code: src/<capability>/**

@@ -104,9 +104,16 @@ artifacts:
         4 hashtags - 3 hashtags or bullets fail silently.
       - New capabilities: the delta's first section is `## Purpose` (1-2
         sentences, 50+ characters, or `--strict` flags it as too brief).
-      - Delta operations with `##` headers: ADDED / MODIFIED (full updated
-        requirement block) / REMOVED (with **Reason** and **Migration**) /
-        RENAMED (FROM:/TO:).
+      - Delta operations with `##` headers: ADDED / MODIFIED / REMOVED (with **Reason** and **Migration**) /
+        RENAMED (FROM:/TO:). A MODIFIED block must restate the requirement with
+        EVERY scenario the living spec already has, plus the new or changed
+        ones - the validator fails a MODIFIED requirement that silently drops
+        an existing scenario.
+      - End each capability's spec with `Code: <glob>` lines (one per line,
+        e.g. `Code: src/billing/**`) naming the files this capability owns.
+        The drift guard matches tracked files against these globs for its
+        staleness and single-owner checks; a capability without a Code line
+        guards nothing.
       - Test-contract migration: when this change legitimately breaks or
         changes an existing acceptance test, the delta MUST carry a MODIFIED
         requirement covering it AND the tasks must track the test rewrite as

@@ -208,6 +208,7 @@ verifies:
 | S20 | C5 | split rule: a 17-task living change goes red (L3) with the split remediation; a recorded `split-considered:` decision passes |
 | S21 | C5 | archived changes are frozen history — a 20-task archive never trips L3 |
 | S22 | — | config rules parse as strings (the CLI never silently drops them), and the "source code stays clean — no spec markers" rule stays engraved |
+| S23 | — | every `rules:` key matches a schema artifact id, and `openspec instructions --json` runs without "Unknown artifact ID" stdout pollution (run-3 finding) |
 | S23 | C5 | capability lifecycle: open change → `archive` → follow-up change on the same capability all stay green (archived deltas stop claiming; in-flight delta + code + test in one commit is fresh) |
 | S24 | C5 | one capability, one owner: parallel open changes on a capability and cross-capability `Code:` double-claims go red; single owner + its own delta passes |
 

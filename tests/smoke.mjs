@@ -497,6 +497,27 @@ check('S21', 'C5', 'archived changes are frozen history: a 20-task archive never
   return 'the backstop polices living work, not history';
 });
 
+// --- S23: every rules key must match a schema artifact ------------------------
+check('S23', '—', 'config rules keys exist in the schema - the CLI never warns "Unknown artifact ID"', () => {
+  const cfgText = fs.readFileSync(path.join(repoRoot, 'openspec', 'config.yaml'), 'utf8');
+  const schemaText = fs.readFileSync(path.join(repoRoot, 'openspec', 'schemas', 'lean-verified', 'schema.yaml'), 'utf8');
+  const rulesBlock = cfgText.split('\nrules:\n')[1] || '';
+  const keys = [...rulesBlock.matchAll(/^  ([a-z-]+):$/gm)].map((m) => m[1]);
+  assert(keys.length > 0, 'no rules found in config.yaml');
+  const artifacts = [...schemaText.matchAll(/^  - id: ([a-z-]+)$/gm)].map((m) => m[1]);
+  for (const k of keys) {
+    assert(artifacts.includes(k), `rules key "${k}" matches no schema artifact (${artifacts.join(', ')})`);
+  }
+  // live proof against the real CLI: instructions --json must carry no warning pollution
+  // live proof against the real CLI: instructions --json must carry no warning pollution
+  fs.mkdirSync(path.join(project, 'openspec', 'changes', 'probe'), { recursive: true });
+  fs.writeFileSync(path.join(project, 'openspec', 'changes', 'probe', '.openspec.yaml'), 'schema: lean-verified\n');
+  fs.writeFileSync(path.join(project, 'openspec', 'changes', 'probe', 'proposal.md'), '## Why\nprobe\n');
+  const r = cliRun(['instructions', '--change', 'probe', 'proposal', '--json']);
+  assert(r.code === 0, `exit ${r.code}: ${r.out.slice(0, 300)}`);
+  assert(!r.out.includes('Unknown artifact ID'), `CLI warned on stdout: ${r.out.match(/Unknown artifact ID[^\n]*/)?.[0] ?? ''}`);
+  return `rules keys [${keys.join(', ')}] all match schema artifacts [${artifacts.join(', ')}]`;
+});
 // --- S22: injected rules must actually load ----------------------------------
 check('S22', '—', 'config rules parse as strings, and the no-inline-markers rule stays engraved', () => {
   const cfg = fs.readFileSync(path.join(repoRoot, 'openspec', 'config.yaml'), 'utf8');

@@ -25,7 +25,6 @@ rules:
     - Phrase tasks as the interface they establish, never as an activity; they are worked red-green-refactor
     - Every Done When criterion traces to at least one task in the traceability table
     - No task without a requirement or Done When criterion that needs it
-  apply:
     - Checked means "its verification passed", never "I stopped looking at it"
     - 'Mechanical sweeps (lint --fix, codemods, framework updates) commit with a "Mechanical-Change: <reason>" trailer and never touch specs/ or acceptance tests; behavior changes go through the change loop'
     - Traceability lives in the openspec/ tree only - specs, tasks, and proposals carry it; source code stays clean (no verified-by, referenced-to, or spec-id comments); code-to-spec correlation is Code globs plus git history
