@@ -5,4 +5,6 @@ docs/
 vendor/
 
 # pi agent session data
-.pi/
+.pi/*
+!.pi/skills/
+!.pi/skills/**
