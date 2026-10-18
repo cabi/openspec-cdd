@@ -147,6 +147,17 @@ The trailer is self-certified but safe to trust: it only silences *staleness*
 outright. Behavior is arbitrated by acceptance tests — which no mechanical
 commit may edit.
 
+| S32 | — | the agent manual (`openspec/AGENTS.md`) names real artifacts, documents every guard check, and root AGENTS.md routes to it |
+
+### The agent page — `openspec/AGENTS.md`
+
+Agents don't read READMEs or docs folders; they read `AGENTS.md` files, and
+the OpenSpec CLI itself looks for `openspec/AGENTS.md`. That file is the
+consumer page: the one rule (no behavior change without an open change),
+map-first brownfield onboarding, the change loop, the doors, and the memory
+artifacts — lean enough to be read every session. Root `AGENTS.md` carries
+only a marker paragraph routing agents there. When you adopt, copy the tree
+and keep both files.
 
 ### Architectural decisions and the glossary — memory beside the contract
 
