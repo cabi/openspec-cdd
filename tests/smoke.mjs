@@ -761,6 +761,7 @@ check('S31', '—', 'arch-extract derives the as-built report and treats decisio
   const tr = spawnSync('node', [path.join(repoRoot, 'openspec/scripts/arch-extract.mjs')], { cwd: repoRoot, encoding: 'utf8' });
   assert(tr.status === 0 && /interpreted/i.test(tr.stdout) && /ground truth/.test(tr.stdout), 'text report must keep derived and interpreted honestly separated');
   return 'derived/interpreted separation + ADR ingestion verified on this repo';
+});
 
 // --- S32: the agent manual exists, points at real artifacts, and is found ---
 check('S32', '—', 'openspec/AGENTS.md is the consumer page and root AGENTS.md routes to it', () => {
@@ -779,7 +780,6 @@ check('S32', '—', 'openspec/AGENTS.md is the consumer page and root AGENTS.md 
   // the manual stays honest with the guard's actual check IDs
   for (const id of ['L1', 'L2', 'M', 'O', 'L3', 'A0', 'A1', 'A2']) assert(man.includes(id), `manual must document guard check ${id}`);
   return 'manual ↔ artifacts ↔ routing in lockstep';
-});
 });
 
 // --- report -----------------------------------------------------------------
