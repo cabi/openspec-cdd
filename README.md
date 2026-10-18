@@ -162,7 +162,7 @@ Requirements: Node ≥ 20 and the OpenSpec repo cloned at `vendor/OpenSpec`
 
 ### Use the schema in your own project
 
-1. Copy this repo's `openspec/` and `.githooks/` folders into your project root, then `git config core.hooksPath .githooks` (door 2) — the CI workflow (door 3) copies along.
+1. Copy this repo's `openspec/` and `.githooks/` folders into your project root, then `git config core.hooksPath .githooks` (door 2) — the CI workflow (door 3) copies along. Assert `openspec --version` matches your init version first: a stale global install silently shadows `npx` (a 1.1.1 global produced archive data loss and missing commands behind 1.14.3-generated skills).
 2. Run `npx openspec schema which lean-verified --json` → `"source": "project"` confirms yours shadows the built-ins.
 3. Drive your agent with the normal OpenSpec loop; the schema changes what the agent is told:
 
