@@ -652,6 +652,19 @@ check('S26', '—', 'patch 2117 (pinned v1.14.3 @ c794978f): new change reports 
   return needsBuild ? 'patch applied, CLI rebuilt, probe green' : 'patch already in place, probe green';
 });
 
+// --- S27: lean archive skill ships as a pinned patch of the vendored template --
+check('S27', '—', 'patch: the generated openspec-archive-change skill is the lean-verified one (runs 3-5 wording)', () => {
+  const tpl = path.join(repoRoot, 'vendor', 'OpenSpec', 'skills', 'openspec-archive-change', 'SKILL.md');
+  const skill = fs.readFileSync(tpl, 'utf8');
+  assert(/lean-verified workflow/.test(skill), 'template description must name the lean-verified workflow');
+  assert(/mechanical finish step/.test(skill), 'template must frame archive as a mechanical finish step');
+  assert(/frozen history/.test(skill), 'template must state archived changes are frozen history');
+  assert(/git add openspec\//.test(skill), 'template must stage openspec/ only in the archive commit');
+  assert(!/Store selection:/.test(skill) && !/allowed-tools:/.test(skill), 'upstream ceremony text must be gone from the template');
+  assert(fs.readFileSync(path.join(repoRoot, 'patches', 'openspec-archive-skill-lean_v1.14.3.patch'), 'utf8').length > 0, 'the pinned patch file must exist');
+  return 'vendored template == the skill dogfooded in runs 3-5';
+});
+
 // --- report -----------------------------------------------------------------
 const width = 74;
 console.log(`\nlean-verified smoke tests  (project: ${path.basename(project)})`);

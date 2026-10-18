@@ -213,6 +213,7 @@ verifies:
 | S24 | C5 | one capability, one owner: parallel open changes on a capability and cross-capability `Code:` double-claims go red; single owner + its own delta passes |
 | S25 | C2/C5 | Holzborste findings engraved: satisfiability rule, test-contract migration, pi skills for the tools |
 | S26 | — | patch 2117 (pinned v1.14.3 @ c794978f): `new change` reports and persists the resolved schema — applied to the vendored CLI, rebuilt, and probed end-to-end against this repo's own schema |
+| S27 | — | the generated `openspec-archive-change` skill is the lean-verified one, shipped as a version-pinned patch of the vendored template (runs 3-5 wording) |
 
 Fixtures: `tests/fixtures/bad-ambiguous/` (the critique, verbatim) vs
 `tests/fixtures/good-verified/` (the fix, same feature — including its recorded
@@ -231,16 +232,23 @@ upstream, this repo carries a version-pinned patch:
   upstream **v1.14.3 @ c794978f**; three hunks: resolve the schema from
   `readProjectConfig(root).schema`, fall back to `root.defaultSchema`, and
   persist the resolved value.
-- `scripts/apply-openspec-patches.sh` — idempotent applier (`npm run
-  patch:openspec`). If upstream drifts past the pin, it refuses with a rebase
+- `patches/openspec-archive-skill-lean_v1.14.3.patch` — replaces the generated
+  `openspec-archive-change` skill with the lean-verified one (mechanical finish
+  step, archive+commit as one stop, staged `openspec/` only, frozen history).
+  This is the exact skill wording dogfooded in runs 3-5; upstream's template
+  buries it in store-selection ceremony.
+- `scripts/apply-openspec-patches.sh` — applies every patch in `patches/`,
+  idempotently (`npm run patch:openspec`). A patch that neither applies nor
+  reverse-applies means upstream moved past the pin: it refuses with a rebase
   hint instead of half-applying.
-- Smoke test **S26** applies the patch, rebuilds `vendor/OpenSpec`, and probes
-  `new change` end-to-end: the JSON payload, the persisted `.openspec.yaml`,
-  and the text output must all say the configured schema (`lean-verified`).
+- Smoke tests **S26** and **S27** apply the patches, rebuild `vendor/OpenSpec`
+  when `src/` changed, and probe the results: S26 checks `new change` reports
+  the configured schema end-to-end; S27 pins the vendored skill template to the
+  lean wording.
 
 To rebase after an upstream release: rebuild `vendor/OpenSpec` at the new pin,
-regenerate the diff into `patches/`, and update the pin in the script header,
-the filename, and this section.
+regenerate the diffs into `patches/`, and update the pins in the script header,
+the filenames, and this section.
 
 ## Validated in the wild
 

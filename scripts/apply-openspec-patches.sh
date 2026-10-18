@@ -1,31 +1,46 @@
 #!/usr/bin/env bash
-# Applies version-pinned patches to the vendored OpenSpec CLI (vendor/OpenSpec).
+# Applies every version-pinned patch in patches/ to the vendored OpenSpec CLI
+# (vendor/OpenSpec).
 #
-# Pin: Fission-AI/OpenSpec v1.14.3 @ c794978f4f8845ce59693373c9dd882ee776588c
-# Patch 2117: `openspec new change` must report and persist the RESOLVED schema
-#   (config.yaml's schema:), not the raw --schema flag (undefined when omitted).
-#   Upstream issue: https://github.com/Fission-AI/OpenSpec/issues/2117
+# Pins: Fission-AI/OpenSpec v1.14.3 @ c794978f4f8845ce59693373c9dd882ee776588c
+# Patches:
+#   openspec-2117-new-change-schema-label_v1.14.3.patch
+#     `new change` must report and persist the RESOLVED schema (config.yaml's
+#     schema:), not the raw --schema flag. Upstream #2117.
+#   openspec-archive-skill-lean_v1.14.3.patch
+#     replaces the generated openspec-archive-change skill with the lean-verified
+#     one (mechanical finish step, archive+commit as one stop, frozen history).
 #
-# Idempotent: exits 0 without touching anything if already applied.
-# If the context no longer matches, upstream moved past the pin: rebase the
-# patch (see README section "Patching the vendored CLI") and update the pin.
+# Idempotent: a patch that is already applied (reverse applies cleanly) is
+# skipped. If a patch neither applies nor reverse-applies, upstream moved past
+# the pin: rebase it (README: 'Patching the vendored CLI') and update the pins.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 vendor="$root/vendor/OpenSpec"
-patch_file="$root/patches/openspec-2117-new-change-schema-label_v1.14.3.patch"
-target="src/commands/workflow/new-change.ts"
 
-[ -d "$vendor" ] || { echo "patch 2117: vendor/OpenSpec missing - clone and build it first (README: 'Smoke tests')"; exit 1; }
+[ -d "$vendor" ] || { echo "patches: vendor/OpenSpec missing - clone and build it first (README: 'Smoke tests')"; exit 1; }
 
-if grep -q 'projectConfig?.schema' "$vendor/$target"; then
-  echo "patch 2117: already applied"
-  exit 0
+applied=0
+skipped=0
+for patch_file in "$root"/patches/*.patch; do
+  name="$(basename "$patch_file" .patch)"
+  if git -C "$vendor" apply --check --reverse "$patch_file" 2>/dev/null; then
+    echo "patch $name: already applied"
+    skipped=$((skipped + 1))
+    continue
+  fi
+  if git -C "$vendor" apply --check "$patch_file" 2>/dev/null; then
+    git -C "$vendor" apply "$patch_file"
+    echo "patch $name: applied"
+    applied=$((applied + 1))
+  else
+    echo "patch $name: context mismatch - upstream moved past v1.14.3 @ c794978f; rebase the patch (README: 'Patching the vendored CLI')"
+    exit 1
+  fi
+done
+
+echo "patches: $applied applied, $skipped already in place"
+if [ "$applied" -gt 0 ] && git -C "$vendor" diff --name-only -- src | grep -q .; then
+  echo "patches: src/ changed - rebuild the CLI with: (cd vendor/OpenSpec && pnpm build)"
 fi
-
-git -C "$vendor" apply --check "$patch_file" 2>/dev/null || {
-  echo "patch 2117: context mismatch - upstream moved past v1.14.3 @ c794978f; rebase the patch (README: 'Patching the vendored CLI')"
-  exit 1
-}
-git -C "$vendor" apply "$patch_file"
-echo "patch 2117: applied - rebuild the CLI with: (cd vendor/OpenSpec && pnpm build)"
