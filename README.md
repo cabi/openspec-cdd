@@ -74,6 +74,34 @@ Setup for door 2, once per clone: `git config core.hooksPath .githooks`
 
 The contract/implementation split answers all four — none of them is contract, so none of them belongs in a spec:
 
+```
+editor ── format-on-save · codestyle fixer        (implementation only, never contract)
+  │
+  ▼
+DOOR 1 · AUTHORING LOOP (agent + human) ──────────────────────────────────────
+  design gate (T5) ▶ proposal.md ▶ spec deltas ▶ tasks.md
+  >8 tasks = split     Code: globs   scenarios    verify by pins
+  foresight            Done-When     Verified by
+       ▲                                            │
+       │  ESCALATION (the only way tools enter):    ▼
+       │  a static finding or lint rule that   implement + acceptance
+       │  changes behavior/architecture        tests (tests/acceptance/)
+       │  re-enters here as a proposal
+  │
+  ▼
+DOOR 2 · COMMIT (.githooks/pre-commit) ───────────────────────────────────────
+  spec-drift guard: L1 pins · L2 staleness · M mechanical · O owner · L3 scale
+  lint --fix and formatters run here too — style, not contract
+  codemod / framework sweep = `Mechanical-Change:` trailer
+    ├─ ages no spec (L2-exempt)
+    └─ M rejects the commit if it touches openspec/specs or acceptance tests
+  │
+  ▼  push
+DOOR 3 · CI (machine verdicts only) ──────────────────────────────────────────
+  guard job · acceptance suite · linter job · static-analysis job
+  red build ▶ opt-in agent triage ▶ diagnosis comment on the PR
+```
+
 | Change class | Layer | Rule |
 |---|---|---|
 | linter / codestyle | implementation | Style is never spec content; `verify by` may run the linter, CI runs it. A repo-wide `lint --fix` sweep commits with a `Mechanical-Change:` trailer: it can't touch specs or acceptance tests, and it ages no spec (M + L2 exemption). |
